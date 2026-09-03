@@ -505,7 +505,7 @@ function renderComparison(){
 }
 function renderArchiveBrowser(){
  const list=$("archiveBrowserList");if(!list)return;
- list.innerHTML=archives.length?archives.map((c,i)=>`<div class="archive-restore-row"><div><h3>${c.name}</h3><p>${c.matches.length}/${c.target} matches · ${c.startRank} → ${c.targetRank||"No target"}</p></div><div class="actions"><button class="ghost" type="button" data-restore-archive="${i}">Unarchive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteArchivedChallenge(${i})">Delete</button></div></div>`).join(""):'<div class="empty">No archived challenges.</div>';
+ list.innerHTML=archives.length?archives.map((c,i)=>`<div class="archive-restore-row"><div><h3>${escapeHtml(c.name)}</h3><p>${escapeHtml(c.matches?.length ?? 0)}/${escapeHtml(c.target ?? "")} matches · ${escapeHtml(c.startRank ?? "")} → ${escapeHtml(c.targetRank||"No target")}</p></div><div class="actions"><button class="ghost" type="button" data-restore-archive="${i}">Unarchive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteArchivedChallenge(${i})">Delete</button></div></div>`).join(""):'<div class="empty">No archived challenges.</div>';
 }
 function openArchiveBrowser(){renderArchiveBrowser();$("archiveBrowserModal").classList.remove("hidden")}
 function closeArchiveBrowser(){$("archiveBrowserModal").classList.add("hidden")}
