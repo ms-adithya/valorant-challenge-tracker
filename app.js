@@ -484,8 +484,16 @@ function validateRankTransition(prevRank,nextRank,status){
  return "";
 }
 function renderRankPath(){
- const chips=[`<span class="rank-chip">Start: ${data.startRank}${isUnranked(data.startRank)||data.startRR==null?"":` ${data.startRR}RR`}</span>`];
- countedMatches().forEach(m=>{if(m.rankStatus!=="Same Rank")chips.push(`<span class="rank-chip ${m.rankStatus.toLowerCase()}">#${m.no} ${m.rankStatus}: ${m.rankAfter}</span>`)});
+ const safeStartRank=escapeHtml(data?.startRank ?? "");
+ const safeStartRr=(isUnranked(data?.startRank)||data?.startRR==null) ? "" : ` ${escapeHtml(data.startRR)}RR`;
+ const chips=[`<span class="rank-chip">Start: ${safeStartRank}${safeStartRr}</span>`];
+ countedMatches().forEach(m=>{
+  if(m.rankStatus!=="Same Rank"){
+   const statusText=String(m.rankStatus ?? "");
+   const statusClass=statusText==="Promoted"?"promoted":statusText==="Demoted"?"demoted":"same-rank";
+   chips.push(`<span class="rank-chip ${statusClass}">#${escapeHtml(m.no)} ${escapeHtml(statusText)}: ${escapeHtml(m.rankAfter)}</span>`);
+  }
+ });
  $("rankPath").innerHTML=chips.join("");
 }
 function renderComparison(){
