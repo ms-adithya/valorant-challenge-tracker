@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VCT — Valorant Challenge Tracker</title>
+  <link rel="stylesheet" href="./styles.css">
+
+
+
+
+
+
+
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">V</div><div><b>VCT</b><span>Performance Lab</span></div></div>
+    <nav>
+      <button type="button" class="nav active" data-target="overview">▦ <span>Overview</span></button>
+      <button type="button" class="nav" data-target="matches">⌁ <span>Matches</span></button>
+      <button type="button" class="nav" data-target="analytics">◫ <span>Analytics</span></button>
+      <button type="button" class="nav" data-target="challenges">◇ <span>Challenges</span></button>
+      <button type="button" class="nav" data-target="changelog">▤ <span>Changelog</span></button>
+    </nav>
+    <div class="side-bottom">
+      <div class="mini"><span>Data storage</span><b>Local browser</b></div>
+            <p class="riot-disclaimer">Independent project. Not affiliated with or endorsed by Riot Games. Reports and match data are user-generated.</p>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <div><p class="kicker">VALORANT PERFORMANCE LAB</p><h1>Challenge Tracker</h1></div>
+      
+    </header>
+
+    <section id="setup" class="setup card">
+      <div class="section-title"><div><p class="kicker">GET STARTED</p><h2>Create your challenge</h2></div><p>Set the baseline once. Match progression is calculated from your entries.</p></div>
+      <form id="challengeForm" class="setup-grid">
+        <label>Challenge name<input id="challengeName" placeholder="e.g. 30 Games to Diamond" required></label>
+        <label>Matches<input id="targetMatches" type="number" min="1" placeholder="e.g. 30" required></label>
+        <label>Current / starting rank<select id="startRank" required><option value="" disabled selected>Choose rank</option><option value="Unranked">Unranked</option><option value="Iron 1">Iron 1</option><option value="Iron 2">Iron 2</option><option value="Iron 3">Iron 3</option><option value="Bronze 1">Bronze 1</option><option value="Bronze 2">Bronze 2</option><option value="Bronze 3">Bronze 3</option><option value="Silver 1">Silver 1</option><option value="Silver 2">Silver 2</option><option value="Silver 3">Silver 3</option><option value="Gold 1">Gold 1</option><option value="Gold 2">Gold 2</option><option value="Gold 3">Gold 3</option><option value="Platinum 1">Platinum 1</option><option value="Platinum 2">Platinum 2</option><option value="Platinum 3">Platinum 3</option><option value="Diamond 1">Diamond 1</option><option value="Diamond 2">Diamond 2</option><option value="Diamond 3">Diamond 3</option><option value="Ascendant 1">Ascendant 1</option><option value="Ascendant 2">Ascendant 2</option><option value="Ascendant 3">Ascendant 3</option><option value="Immortal 1">Immortal 1</option><option value="Immortal 2">Immortal 2</option><option value="Immortal 3">Immortal 3</option><option value="Radiant">Radiant</option></select></label>
+        <label>Starting RR<input id="startRR" type="number" min="0" max="100" placeholder="0–100" required></label>
+        <label>Target rank<select id="targetRank"><option value="">No target</option><option value="Iron 1">Iron 1</option><option value="Iron 2">Iron 2</option><option value="Iron 3">Iron 3</option><option value="Bronze 1">Bronze 1</option><option value="Bronze 2">Bronze 2</option><option value="Bronze 3">Bronze 3</option><option value="Silver 1">Silver 1</option><option value="Silver 2">Silver 2</option><option value="Silver 3">Silver 3</option><option value="Gold 1">Gold 1</option><option value="Gold 2">Gold 2</option><option value="Gold 3">Gold 3</option><option value="Platinum 1">Platinum 1</option><option value="Platinum 2">Platinum 2</option><option value="Platinum 3">Platinum 3</option><option value="Diamond 1">Diamond 1</option><option value="Diamond 2">Diamond 2</option><option value="Diamond 3">Diamond 3</option><option value="Ascendant 1">Ascendant 1</option><option value="Ascendant 2">Ascendant 2</option><option value="Ascendant 3">Ascendant 3</option><option value="Immortal 1">Immortal 1</option><option value="Immortal 2">Immortal 2</option><option value="Immortal 3">Immortal 3</option><option value="Radiant">Radiant</option></select></label>
+        <label class="wide"><span class="label-row"><span>Description</span><span class="optional-badge">Optional</span></span><input id="description" placeholder="Add challenge rules or a short note"></label>
+        <div id="storageNotice" class="storage-notice wide hidden"></div><div class="setup-actions wide"><button id="cancelNewChallenge" class="ghost hidden" type="button">Cancel</button><button class="primary" type="submit">Start challenge</button></div>
+      </form>
+    </section>
+
+    <div id="app" class="hidden">
+      <section id="overview" class="page active-page">
+        <div class="challenge-hero card">
+          <div>
+            <div class="hero-topline"><div class="badge">ACTIVE CHALLENGE</div><button id="challengeSettingsBtn" class="ghost compact-btn" type="button">Challenge options</button></div>
+            <h2 id="heroName"></h2>
+            <p id="heroDesc"></p>
+            <div class="progress-line"><span id="progressFill"></span></div>
+            <div class="progress-label"><span id="progressLabel"></span><span id="recordLabel"></span></div>
+            <div id="rankPath" class="rank-path"></div>
+          </div>
+          <div class="rank-panel">
+            <small>CURRENT RANK</small><div id="rankEmblem" class="rank-emblem">V</div><strong id="heroRank"></strong><b id="heroRR"></b><span id="heroNet"></span>
+          </div>
+        </div>
+
+        <div id="statCards" class="stat-grid"></div>
+
+        <div id="overviewProgressGrid" class="grid-2 overview-progress-grid">
+          <section id="rrProgressCard" class="card rr-progress-card">
+            <div class="section-title compact"><div><p class="kicker">PROGRESSION</p><h2>RR progression</h2></div><span class="muted">Cumulative net RR</span></div>
+            <div id="rrChart" class="line-chart"><div class="empty">Add matches to build your progression chart.</div></div>
+          </section>
+          <section class="card">
+            <div class="section-title compact"><div><p class="kicker">RECENT FORM</p><h2>Last matches</h2></div></div>
+            <div id="recentMatches" class="recent-list"></div>
+          </section>
+        </div>
+        <div class="grid-2">
+          <section class="card">
+            <div class="section-title compact"><div><p class="kicker">PERFORMANCE TREND</p><h2>Match metrics</h2></div>
+              <div class="chart-controls"><select id="trendRange" class="chart-select" aria-label="Match metric chart range"><option value="auto">Auto range</option><option value="10">Last 10</option><option value="25">Last 25</option><option value="50">Last 50</option><option value="all">All matches</option></select><select id="trendMetric" class="chart-select"><option value="kd">K/D</option><option value="acs">ACS</option><option value="adr">ADR</option><option value="ddDelta">DDΔ</option><option value="kast">KAST %</option><option value="hs">HS %</option></select></div>
+            </div>
+            <div id="metricChart" class="line-chart"><div class="empty">Add matches to see performance trends.</div></div>
+          </section>
+          <section class="card">
+            <div class="section-title compact"><div><p class="kicker">RESULTS</p><h2>Win / loss distribution</h2></div></div>
+            <div id="resultBars"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="matches" class="page"><div class="section-title page-head"><div><p class="kicker">MATCH LOG</p><h2>Matches</h2></div></div>
+        <div class="section-title page-head"><div><p class="kicker">MATCH HISTORY</p><h2>All matches</h2></div><div class="actions match-toolbar"><button id="matchFilterToggle" class="ghost" type="button" aria-expanded="false" aria-controls="matchFilterPanel">Sort &amp; filter</button><button id="importMatchesBtn" class="ghost" type="button">Import matches</button><button id="exportCsv" class="ghost" type="button">Export CSV</button><button id="addMatchBtn" class="primary" type="button">+ Add match</button><input id="importMatchesFile" type="file" accept=".csv,.tsv,.json,text/csv,text/tab-separated-values,application/json" hidden></div></div>
+        <div id="matchFilterPanel" class="match-filter-panel hidden">
+          <label>Sort by<select id="matchSort"><option value="no-desc">Match # · highest first</option><option value="no-asc">Match # · lowest first</option><option value="agent-asc">Agent · A–Z</option><option value="agent-desc">Agent · Z–A</option><option value="result">Result · Win → Draw → Loss</option><option value="map-asc">Map · A–Z</option><option value="map-desc">Map · Z–A</option><option value="kd-desc">K/D · highest first</option><option value="acs-desc">ACS · highest first</option><option value="dda-desc">DDΔ · highest first</option></select></label>
+          <label>Result<select id="matchResultFilter"><option value="">All results</option><option>Win</option><option>Loss</option><option>Draw</option></select></label>
+          <label>Agent<select id="matchAgentFilter"><option value="">All agents</option></select></label>
+          <label>Map<select id="matchMapFilter"><option value="">All maps</option></select></label>
+          <button id="clearMatchFilters" class="ghost match-filter-clear" type="button">Reset</button><span id="matchFilterCount" class="muted match-filter-count"></span>
+        </div>
+        <div class="card table-card"><div class="table-wrap" role="region" aria-label="Match history" tabindex="0"><table><thead><tr><th>#</th><th>Result</th><th>Agent</th><th>Map</th><th>Score</th><th>K/D/A</th><th>K/D</th><th>ACS</th><th>DDΔ</th><th>RR</th><th></th></tr></thead><tbody id="matchRows"></tbody></table></div></div><div class="match-table-meta match-table-meta-bottom"><label>Rows<select id="matchPageSize"><option value="25">25</option><option value="50">50</option><option value="all">All</option></select></label><div id="matchPagination" class="match-pagination"></div></div>
+      </section>
+
+      <section id="analytics" class="page">
+        <div class="section-title page-head analytics-head"><div><p class="kicker">PERFORMANCE</p><h2>Competitive analytics</h2><p class="muted">Read from overall form into agents, maps, trends and combinations.</p></div><label class="analytics-range-control"><span>View</span><select id="analyticsRange"><option value="all">All matches</option><option value="5">Last 5</option><option value="10">Last 10</option><option value="20">Last 20</option></select></label></div>
+        <div id="analyticsStrip" class="performance-strip"></div>
+
+        <div class="analytics-feature-grid">
+          <section class="card accuracy-panel"><div class="card-head"><div><p class="kicker">ACCURACY</p><h3>Shot accuracy</h3></div><span class="subtle">Recent recorded HS%</span></div><div id="accuracyPanel"></div></section>
+          <section class="card role-panel"><div class="card-head"><div><p class="kicker">ROLES</p><h3>Role performance</h3></div><span class="subtle">Derived from agents played</span></div><div id="rolePanel" class="role-list"></div></section>
+        </div>
+
+        <section class="card top-agents-panel"><div class="card-head"><div><p class="kicker">AGENTS</p><h3>Top agents</h3></div><span class="subtle">Matches · WR · combat metrics · best map</span></div><div id="topAgentsTable" class="responsive-table"></div></section>
+
+        <section id="top-maps-panel" class="top-maps-panel">
+  <div class="panel-kicker">MAPS</div>
+  <div class="panel-title-row"><div><h3>Top maps</h3><p>Ranked by win rate. Minimum sample size is shown with each record.</p></div>
+  <button type="button" id="toggle-all-maps" class="secondary-btn">View all maps</button></div>
+  <div id="top-maps-list" class="top-maps-list"></div>
+</section>
+
+
+        <div class="grid-2 analytics-secondary">
+          <section class="card"><div class="section-title compact"><div><p class="kicker">PICK RATE</p><h3>Agent usage</h3></div></div><div id="agentDist"></div></section>
+          <section class="card"><div class="section-title compact"><div><p class="kicker">MAP POOL</p><h3>Map rotation</h3></div></div><div id="mapDist"></div></section>
+        </div>
+
+        <div class="grid-2">
+          <section class="card"><div class="section-title compact"><div><p class="kicker">WIN RATE</p><h3>By agent</h3></div></div><div id="agentWinBars" class="bar-chart"></div></section>
+          <section class="card"><div class="section-title compact"><div><p class="kicker">WIN RATE</p><h3>By map</h3></div></div><div id="mapWinBars" class="bar-chart"></div></section>
+        </div>
+
+        <section class="card">
+          <div class="section-title compact"><div><p class="kicker">FORM</p><h2>First 5 vs last 5 matches</h2></div><span class="muted">Shows direction of performance.</span></div>
+          <div id="comparison" class="comparison-grid"></div>
+        </section>
+        <section class="card insight-card">
+          <div class="section-title compact"><div><p class="kicker">INSIGHTS</p><h2>Challenge signals</h2></div><span class="muted">Agent × Map combos qualify at 3+ matches. Best/worst requires 2 qualified combos.</span></div>
+          <div id="insights" class="insight-grid"></div>
+        </section>
+        <section class="card">
+          <div class="section-title compact"><div><p class="kicker">CROSS ANALYSIS</p><h2>Agent × Map</h2></div><span class="muted">Qualified cells have 3+ matches; use this after enough combination data exists.</span></div>
+          <div id="matrix" class="matrix-wrap"></div>
+        </section>
+      </section>
+
+      <section id="challenges" class="page">
+        <div class="section-title page-head"><div><p class="kicker">ARCHIVE</p><h2>Challenge history</h2></div><button id="newChallengePage" class="primary" type="button">+ New challenge</button></div>
+        <div class="backup-bar card">
+  <div><p class="kicker">DATA PORTABILITY</p><h3>Backup & restore</h3><p class="muted">Export all challenges and matches as JSON, or restore a previous backup.</p></div>
+  <div class="actions"><button id="backupBtn" class="ghost">Export backup</button><label class="ghost file-btn">Import backup<input id="restoreInput" type="file" accept=".json,application/json"></label></div>
+</div>
+<div id="challengeArchive" class="challenge-list"></div>
+      </section>    </div>
+  
+
+<section id="changelog" class="page changelog-view">
+  <div class="section-kicker">UPDATES</div>
+  <div class="changelog-heading-row">
+    <div>
+      <h2>Changelog</h2>
+      <p class="muted">Patch notes, fixes and major feature updates for Valorant Challenge Tracker.</p>
+    </div>
+    <span class="version-pill">Current v10.1</span>
+  </div>
+
+  <div class="update-feed">
+    <details class="update-card major" open>
+      <summary><span><strong>v10.1 — Stability &amp; interface polish</strong><small>Patch · Match history, charts &amp; reliability</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body"><h4>Fixed &amp; improved</h4><ul>
+        <li>Fixed Match History rendering and Sort &amp; Filter reliability, including safe option generation and clearer active-filter feedback.</li>
+        <li>Trend and RR charts now retain actual Match History IDs, preserve numeric gaps and expose the real match number in point tooltips.</li>
+        <li>Recent matches and current-rank derivation now follow actual match numbers rather than insertion order.</li>
+        <li>Missing optional metrics display as unavailable instead of fabricated zero averages, and local-save failures now surface an actionable notice.</li>
+        <li>Improved table scrolling, sticky headers, keyboard focus and responsive toolbar/filter behaviour.</li>
+      </ul>
+        <h4>Sub patch · Rank &amp; RR progression reliability</h4>
+        <ul>
+<li>Introduced a centralized challenge rank/RR progression engine.</li>
+<li>Added normalized runtime rank states distinguishing <strong>Recorded</strong>, <strong>Safely Derived</strong> and <strong>Unavailable</strong> values.</li>
+<li>Missing RR remains unavailable instead of being interpreted as <code>0</code>.</li>
+<li>RR progression is derived only when mathematically safe from authoritative recorded data.</li>
+<li>Missing RR or rank information safely stops derivation instead of producing guessed progression.</li>
+<li>Placement (Unranked → Ranked) remains independent of promotion and demotion events.</li>
+<li>Recorded values always take precedence over derived values.</li>
+<li>Rank progression automatically rebuilds after add, edit, delete, import, restore and renumber operations.</li>
+<li>Derived progression is runtime-only and never persisted as authoritative user-entered data.</li>
+</ul></div>
+    </details>
+
+    <details class="update-card major">
+      <summary><span><strong>v10.0 — Challenge completion & reporting</strong><small>Major update · Completion workflow & exports</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <h4>Added & improved</h4>
+        <ul>
+          <li>Completed challenges now expose a challenge-scoped report export without automatically downloading anything.</li>
+          <li>Completion reports include overall summary, detailed analytics and optional full match history, with CSV and JSON data exports plus a printable report that can be saved as PDF.</li>
+          <li>Reports remain tied to the completed challenge even after another challenge is opened or created.</li>
+          <li>Unavailable optional statistics render as — instead of fabricated zero values.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="update-card major">
+      <summary><span><strong>v9.8 — Dynamic analytics overhaul</strong><small>Major update · Analytics</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <h4>Improved</h4>
+        <ul>
+          <li>Added Analytics View ranges for All matches, Last 5, Last 10 and Last 20.</li>
+          <li>The selected analytics range now updates summary metrics, Shot Accuracy, Role Performance, Top Agents, Top Maps, Agent Usage, Map Rotation, and win-rate breakdowns together.</li>
+          <li>Shot Accuracy charts now use actual Match History IDs instead of artificial sequential positions.</li>
+          <li>ADR, ACS and DDΔ summary values are calculated from the active analytics range.</li>
+          <li>Agent usage ordering and analytics meters are now derived consistently from the underlying match data.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="update-card major">
+      <summary><span><strong>v9.6 — Match data integrity patch</strong><small>Patch · Data integrity & analytics</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <h4>Fixed</h4>
+        <ul>
+          <li>Optional RR After and RR Change values remain truly optional and are no longer converted into fabricated zero or null displays.</li>
+          <li>RR-dependent cards, recent-match displays and progression analytics correctly handle unavailable RR data.</li>
+          <li>Manual saves preserve blank Advanced Options, while legacy null-like stored values are normalised safely on load.</li>
+          <li>Match IDs remain stable after deletion and new matches use the lowest available positive match number.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="update-card major">
+      <summary><span><strong>v9.1 — Match import & entry reliability</strong><small>Major fix · Import, numbering & match modal</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <h4>Fixed & improved</h4>
+        <ul>
+          <li>Added validated CSV, TSV and compatible JSON match import with a review step before data is saved.</li>
+          <li>Match numbers are editable; valid unused imported IDs are preserved while conflicts or missing IDs are reassigned to available numbers.</li>
+          <li>Bulk import can save ready rows while skipping rows that still need attention.</li>
+          <li>Import review close, cancel, backdrop, Escape and file-retry actions now behave reliably.</li>
+          <li>RR fields are optional during import and are validated only when supplied.</li>
+          <li>Consolidated match-entry modal fixes: Advanced Options are correctly positioned above Notes, optional fields stay grouped, and long expanded forms remain usable within the viewport.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="update-card major">
+      <summary><span><strong>v8.4 — Reliability & interface polish</strong><small>Patch · Stability & UI</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <h4>Fixed & improved</h4>
+        <ul>
+          <li>Fixed challenge-form submission paths that could reload the page unexpectedly.</li>
+          <li>Replaced disruptive browser alerts in normal workflows with in-app feedback.</li>
+          <li>Refined navigation, cards, tables, analytics panels, modal hierarchy and save/import feedback.</li>
+          <li>Consolidated analytics navigation so Top Maps remains inside the Analytics experience.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="update-card major">
+      <summary><span><strong>v8.0 — Competitive analytics overhaul</strong><small>Major update · Analytics foundation</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <ul>
+          <li>Introduced accuracy analytics, recent HS% trends and role performance.</li>
+          <li>Added Top Agents and Top Maps analysis with data-driven performance metrics.</li>
+          <li>Added agent/map win-rate analysis and cross-analysis foundations.</li>
+          <li>Redesigned Match History and strengthened the dashboard information hierarchy.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</section>
+</main>
+</div>
+
+<div id="archiveBrowserModal" class="modal hidden">
+  <div class="modal-backdrop" data-archive-browser-close></div>
+  <div class="modal-card archive-browser-card">
+    <div class="modal-head"><div><p class="kicker">ARCHIVE</p><h2>Archived challenges</h2><p class="modal-subtitle">Restore any archived challenge as your active challenge.</p></div><button class="close" type="button" data-archive-browser-close>×</button></div>
+    <div id="archiveBrowserList" class="challenge-list"></div>
+  </div>
+</div>
+
+<div id="challengeModal" class="modal hidden">
+  <div class="modal-backdrop" data-challenge-close></div>
+  <div class="modal-card small-modal">
+    <div class="modal-head"><div><p class="kicker">CHALLENGE</p><h2>Challenge options</h2></div><button class="close" type="button" data-challenge-close>×</button></div>
+    <p class="muted">Manage the currently open challenge. Reset permanently removes its locally stored match data.</p>
+    <div class="challenge-option-actions">
+      <button id="archiveChallengeBtn" class="ghost" type="button">Archive challenge</button>
+      <button id="resetChallengeBtn" class="ghost danger-zone" type="button">Reset challenge</button>
+      <button id="deleteActiveChallengeBtn" class="ghost danger-zone full-danger" type="button">Delete challenge permanently</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card">
+    <div class="modal-head"><div><p class="kicker">MATCH ENTRY</p><h2 id="matchTitle">Add match</h2><p id="matchSubtitle" class="modal-subtitle">Record the result, rank movement and performance stats.</p></div><button class="close" type="button" data-close>×</button></div>
+    <form id="matchForm" class="match-grid" novalidate><input id="editNo" type="hidden"><div class="match-context wide"><span id="matchNumberBadge">MATCH #1</span><label class="match-number-edit">Match number <input id="matchNo" type="number" min="1" step="1" required></label><span>Match numbers must be unique.</span></div><div id="matchValidation" class="match-validation hidden" role="alert" aria-live="polite"></div>
+      <label class="agent-field">Agent
+        <div class="agent-combobox" id="agentCombobox">
+          <input id="agent" type="text" readonly autocomplete="off" placeholder="Select agent" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="agentDropdown">
+          <div id="agentDropdown" class="agent-dropdown hidden">
+            <div class="agent-search-wrap"><input id="agentSearch" type="search" autocomplete="off" placeholder="Search agents…" aria-label="Search agents"></div>
+            <div id="agentOptions" class="agent-options" role="listbox" aria-label="Agents"></div>
+          </div>
+        </div>
+      </label>
+      <label class="map-field">Map
+        <div class="map-combobox" id="mapCombobox">
+          <input id="map" type="text" readonly autocomplete="off" placeholder="Select map" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="mapDropdown">
+          <div id="mapDropdown" class="map-dropdown hidden" role="listbox" aria-label="Maps">
+            <div id="mapOptions" class="map-options"></div>
+          </div>
+        </div>
+      </label>
+      <label class="result-field">Result
+        <div class="result-combobox" id="resultCombobox">
+          <input id="result" type="text" readonly value="Win" autocomplete="off" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="resultDropdown">
+          <div id="resultDropdown" class="rank-dropdown hidden">
+            <div id="resultOptions" class="rank-options" role="listbox" aria-label="Result"></div>
+          </div>
+        </div>
+      </label>
+      <label class="rank-after-field">Rank after
+        <div class="rank-combobox" id="rankAfterCombobox">
+          <input id="rankAfter" type="text" readonly required autocomplete="off" placeholder="Choose rank" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="rankAfterDropdown">
+          <div id="rankAfterDropdown" class="rank-dropdown hidden">
+            <div class="rank-search-wrap"><input id="rankAfterSearch" type="search" autocomplete="off" placeholder="Search ranks…" aria-label="Search ranks"></div>
+            <div id="rankAfterOptions" class="rank-options" role="listbox" aria-label="Ranks"></div>
+          </div>
+        </div>
+      </label>
+      <label class="rank-status-field">Rank status
+        <div class="rank-status-combobox" id="rankStatusCombobox">
+          <input id="rankStatus" type="text" readonly value="Same Rank" autocomplete="off" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="rankStatusDropdown">
+          <div id="rankStatusDropdown" class="rank-dropdown hidden">
+            <div id="rankStatusOptions" class="rank-options" role="listbox" aria-label="Rank status"></div>
+          </div>
+        </div>
+      </label>
+      <div class="score-box"><label class="score-field">Your score<input id="myScore" type="number" min="0" required></label><span class="score-separator" aria-hidden="true">:</span><label class="score-field">Enemy score<input id="enemyScore" type="number" min="0" required></label></div>
+      <label>Kills<input id="kills" type="number" min="0" required></label>
+      <label>Deaths<input id="deaths" type="number" min="0" required></label>
+      <label>Assists<input id="assists" type="number" min="0" required></label>
+      <label>DDΔ<input id="ddDelta" type="number" step=".1" required placeholder="+ / -"></label>
+      <label>HS %<input id="hs" type="number" min="0" max="100" step=".1" required></label>
+      <label>ACS<input id="acs" type="number" min="0" step=".1" required></label>
+      <label>ADR<input id="adr" type="number" min="0" step=".1" required></label>
+      <label>KAST %<input id="kast" type="number" min="0" max="100" step=".1" required></label>
+      
+      <details class="advanced-options wide" id="advancedMatchOptions">
+        <summary><span><strong>Advanced options</strong><small>Optional match details</small></span><span class="advanced-chevron">⌄</span></summary>
+        <div class="advanced-grid">
+          <label>RR after match<span class="field-hint">Optional · RR shown after this match</span><input id="rrAfter" type="number" min="0" max="100" placeholder="e.g. 62"></label>
+          <label>RR change<span class="field-hint">Optional · negative values allowed</span><input id="rrChange" type="number" min="-50" max="50" placeholder="e.g. +18"></label>
+          <label>First kills<span class="field-hint">Optional</span><input id="firstKills" type="number" min="0"></label>
+          <label>First deaths<span class="field-hint">Optional</span><input id="firstDeaths" type="number" min="0"></label>
+          <label>Multi kills<span class="field-hint">Optional</span><input id="multiKills" type="number" min="0"></label>
+          <label>Rounds played<span class="field-hint">Optional · automatically calculated from score</span><input id="rounds" type="number" min="0"></label>
+        </div>
+      </details>
+      <label class="wide">Notes<input id="notes" placeholder="Optional match notes"></label>
+      <div class="modal-actions wide"><button type="button" class="ghost" data-close>Cancel</button><button id="saveMatchBtn" class="primary" type="submit">Save match</button></div>
+    </form>
+  </div>
+</div>
+
+
+<div id="confirmModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" data-confirm-cancel></div>
+  <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-head">
+      <div>
+        <p id="confirmKicker" class="kicker">CONFIRM ACTION</p>
+        <h2 id="confirmTitle">Are you sure?</h2>
+        <p id="confirmMessage" class="modal-subtitle"></p>
+      </div>
+      <button class="close" type="button" data-confirm-cancel aria-label="Close">×</button>
+    </div>
+    <div class="confirm-actions">
+      <button id="confirmCancelBtn" class="ghost" type="button" data-confirm-cancel>Cancel</button>
+      <button id="confirmActionBtn" class="primary danger-confirm" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+
+  <script src="./app.js"></script>
+
+
+
+
+
+<script id="v83-topmaps">
+(function(){
+ let expanded=false;
+ const $=id=>document.getElementById(id);
+ function findMatches(){
+   try{
+     const candidates=[];
+     for(let i=0;i<localStorage.length;i++){
+       const raw=localStorage.getItem(localStorage.key(i));
+       try{candidates.push(JSON.parse(raw))}catch(_){}
+     }
+     for(const x of candidates){
+       if(Array.isArray(x) && x.some(v=>v && v.map)) return x;
+       if(x && Array.isArray(x.matches)) return x.matches;
+       if(x && Array.isArray(x.activeChallenges)){
+         const a=x.activeChallenges.flatMap(c=>c.matches||[]); if(a.length)return a;
+       }
+       if(x && Array.isArray(x.challenges)){
+         const a=x.challenges.flatMap(c=>c.matches||[]); if(a.length)return a;
+       }
+     }
+   }catch(_){}
+   return [];
+ }
+ function render(){
+   const host=$("top-maps-list"); if(!host)return;
+   const stats={};
+   const scopedMatches=(typeof analyticsMatches==="function"?analyticsMatches():findMatches());
+   scopedMatches.forEach(m=>{
+     if(!m?.map)return;
+     const z=stats[m.map]||(stats[m.map]={m:0,w:0,l:0,d:0});
+     z.m++; const r=String(m.result||"").toLowerCase();
+     if(r==="win")z.w++; else if(r==="loss")z.l++; else if(r==="draw")z.d++;
+   });
+   let rows=Object.entries(stats).map(([name,z])=>({...z,name,wr:z.m?100*z.w/z.m:0}))
+     .sort((a,b)=>b.wr-a.wr||b.m-a.m||a.name.localeCompare(b.name));
+   if(!rows.length){host.innerHTML='<div class="map-rank-row"><div class="map-rank">—</div><div><div class="map-name">No map data yet</div><div class="map-sub">Add matches to build map rankings.</div></div></div>';return}
+   host.innerHTML=(expanded?rows:rows.slice(0,7)).map((z,i)=>{
+     const cls=z.wr>=60?"good":z.wr>=45?"mid":"low";
+     return `<div class="map-rank-row"><div class="map-rank">#${i+1}</div><div><div class="map-name">${z.name}</div><div class="map-sub">${z.m} match${z.m===1?"":"es"}</div></div><div class="map-stat"><div class="map-wr ${cls}">${z.wr.toFixed(1)}%</div><div class="map-record">${z.w}W · ${z.l}L${z.d?` · ${z.d}D`:""}</div></div></div>`;
+   }).join("");
+   const b=$("toggle-all-maps"); if(b){b.hidden=rows.length<=7;b.textContent=expanded?"Show top maps":"View all maps"}
+ }
+ document.addEventListener("click",e=>{if(e.target.closest("#toggle-all-maps")){expanded=!expanded;render()}});
+ document.addEventListener("DOMContentLoaded",render);
+ window.renderTopMaps=render;
+})();
+</script>
+
+
+<div id="importMatchesModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" data-import-close></div>
+  <section class="modal-card import-matches-card" role="dialog" aria-modal="true" aria-labelledby="importMatchesTitle">
+    <div class="modal-head">
+      <div><p class="kicker">MATCH IMPORT</p><h2 id="importMatchesTitle">Review imported matches</h2><p class="modal-subtitle">CSV, TSV and compatible JSON are supported. Every row is validated before anything is saved.</p></div>
+      <button class="icon-btn" type="button" data-import-close aria-label="Close">×</button>
+    </div>
+    <div id="importMatchesSummary" class="import-summary"></div>
+    <div id="importMatchesPreview" class="import-preview"></div>
+    <div class="modal-actions">
+      <button class="ghost" type="button" data-import-close>Cancel</button>
+      <button id="confirmImportMatchesBtn" class="primary" type="button">Import valid matches</button>
+    </div>
+  </section>
+</div>
+
+<div id="noticeModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" data-notice-close></div>
+  <section class="modal-card notice-card" role="alertdialog" aria-modal="true" aria-labelledby="noticeTitle">
+    <div class="notice-icon">!</div>
+    <div>
+      <p class="kicker">TRACKER NOTICE</p>
+      <h2 id="noticeTitle">Something needs attention</h2>
+      <p id="noticeMessage" class="modal-subtitle"></p>
+    </div>
+    <div class="modal-actions"><button id="noticeOkBtn" class="primary" type="button" data-notice-close>Got it</button></div>
+  </section>
+</div>
+<div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+</body>
+</html>
