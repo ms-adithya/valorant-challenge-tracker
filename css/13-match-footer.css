@@ -1,0 +1,184 @@
+/* 13-match-footer.css - Match-history pagination footer and its single-line overrides.
+   Part of an ordered set; see css/README.md. Load order is load-bearing. */
+
+/* Match history pagination footer */
+.match-footer-center {
+  flex:1 1 420px;
+  display:flex;
+  justify-content:center;
+}
+.pagination-center {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.rows-label {
+  color:var(--muted);
+  font-size:12px;
+}
+@media(max-width:720px) {
+  .match-footer-center {
+    order:3;
+    width:100%;
+    justify-content:flex-start;
+  }
+}
+/* Keep the Rows selector visually on the right while preserving its original DOM position */
+.match-table-meta-bottom {
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:8px;
+  padding-top:6px;
+  white-space:nowrap;
+}
+.match-table-meta-bottom > label {
+  grid-column:3;
+  justify-self:end;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+.match-table-meta-bottom > #matchPagination {
+  grid-column:2;
+  justify-self:center;
+}
+.match-table-meta-bottom .match-pagination-summary {
+  grid-column:1;
+  justify-self:start;
+  color:var(--muted);
+  font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.match-table-meta-bottom .match-footer-center {
+  display:flex;
+  align-items:center;
+  margin:0;
+}
+.match-table-meta-bottom > label select {
+  min-width:64px;
+  height:36px;
+  padding:6px 10px;
+}
+.match-table-meta-bottom .rows-label {
+  display:inline-block;
+  margin-right:8px;
+}
+/* Strong override to ensure a single-line 3-column footer in Matches view */
+.match-table-meta-bottom {
+  display:grid !important;
+  grid-template-columns: 1fr auto 1fr !important;
+  grid-template-areas: "summary center rows" !important;
+  align-items:center !important;
+  gap:8px !important;
+  white-space:nowrap !important;
+}
+.match-table-meta-bottom > * {
+  align-self:center;
+}
+.match-table-meta-bottom .match-pagination-summary {
+  grid-area:summary;
+  justify-self:start;
+}
+.match-table-meta-bottom > #matchPagination {
+  grid-area:center;
+  justify-self:center;
+}
+.match-table-meta-bottom > label {
+  grid-area:rows;
+  justify-self:end;
+}
+.match-table-meta-bottom .match-footer-center {
+  display:flex;
+  gap:6px;
+  align-items:center;
+}
+.match-table-meta-bottom select {
+  height:36px;
+}
+/* Absolute-placement fallback to guarantee a single horizontal line */
+.match-table-meta-bottom {
+  position:relative!important;
+  min-height:48px;
+}
+.match-table-meta-bottom .match-pagination-summary {
+  position:absolute;
+  left:0;
+  top:50%;
+  transform:translateY(-50%);
+  margin:0;
+}
+.match-table-meta-bottom #matchPagination {
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.match-table-meta-bottom > label {
+  position:absolute;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  margin:0;
+}
+@media(max-width:720px) {
+  .match-table-meta-bottom {
+    position:static;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    min-height:0;
+  }
+  .match-table-meta-bottom .match-pagination-summary {
+    position:static;
+    transform:none;
+  }
+  .match-table-meta-bottom #matchPagination {
+    position:static;
+    transform:none;
+    justify-self:center;
+  }
+  .match-table-meta-bottom > label {
+    position:static;
+    transform:none;
+  }
+}
+#challenges .challenge-item .actions {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.storage-notice {
+  padding:10px 12px;
+  border-radius:9px;
+  font-size:10px;
+  line-height:1.45;
+  background:#231719;
+  border:1px solid #513034;
+  color:#d98b8f;
+}
+.challenge-option-actions .full-danger {
+  grid-column:1/-1;
+}
+.delete-archive-btn {
+  color:#df7478;
+  border-color:#533237;
+  background:#191214;
+}
+.delete-archive-btn:hover {
+  background:#251518;
+  border-color:#784047;
+}
+#matches #addMatchBtn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
