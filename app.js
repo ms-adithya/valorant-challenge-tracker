@@ -8,6 +8,9 @@ const $=x=>document.getElementById(x);
 function escapeHtml(value){
  return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 }
+function escapeJsSingleQuoted(value){
+ return String(value??"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\r/g,"\\r").replace(/\n/g,"\\n").replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029");
+}
 function fill(id,items,placeholder="Select an option"){
  const el=$(id); if(!el) return;
  el.innerHTML=`<option value="" disabled selected>${placeholder}</option>`+items.map(item=>`<option value="${item}">${item}</option>`).join("");
@@ -954,9 +957,15 @@ function renderArchive(){
    const archiveIndex=isActive?-1:archives.findIndex(x=>x.id===c.id);
    const selected=isActive&&data&&c.id===data.id,completed=challengeComplete(c);
    const status=completed?"COMPLETED":(isActive?(selected?"ACTIVE · OPEN":"ACTIVE"):"ARCHIVED");
-   const exportBtn=completed?`<button class="ghost report-export-btn" type="button" onclick="openChallengeReport('${c.id}')">Export report</button>`:"";
-   return `<div class="challenge-item ${selected?"selected-challenge":""} ${completed?"completed-challenge":""}"><div><span class="status ${completed?"completed":(isActive?"":"archived")}">${status}</span><h3>${c.name}</h3><p>${challengeProgressText(c,{history:true})} · ${c.startRank} → target ${c.targetRank||"No target"}</p></div><div class="actions">${exportBtn}${isActive
-    ? `<button class="ghost" type="button" onclick="openActiveChallenge('${c.id}')">Open</button><button class="ghost" type="button" onclick="archiveActiveChallenge('${c.id}')">Archive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteActiveById('${c.id}')">Delete</button>`
+   const safeId=escapeJsSingleQuoted(c.id);
+   const safeStatus=escapeHtml(status);
+   const safeName=escapeHtml(c.name);
+   const safeProgress=escapeHtml(challengeProgressText(c,{history:true}));
+   const safeStartRank=escapeHtml(c.startRank);
+   const safeTargetRank=escapeHtml(c.targetRank||"No target");
+   const exportBtn=completed?`<button class="ghost report-export-btn" type="button" onclick="openChallengeReport('${safeId}')">Export report</button>`:"";
+   return `<div class="challenge-item ${selected?"selected-challenge":""} ${completed?"completed-challenge":""}"><div><span class="status ${completed?"completed":(isActive?"":"archived")}">${safeStatus}</span><h3>${safeName}</h3><p>${safeProgress} · ${safeStartRank} → target ${safeTargetRank}</p></div><div class="actions">${exportBtn}${isActive
+    ? `<button class="ghost" type="button" onclick="openActiveChallenge('${safeId}')">Open</button><button class="ghost" type="button" onclick="archiveActiveChallenge('${safeId}')">Archive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteActiveById('${safeId}')">Delete</button>`
     : `<button class="ghost" type="button" onclick="unarchiveChallenge(${archiveIndex})">Unarchive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteArchivedChallenge(${archiveIndex})">Delete</button>`}</div></div>`;
  }).join(""):'<div class="card empty">No challenges yet.</div>';
 }
