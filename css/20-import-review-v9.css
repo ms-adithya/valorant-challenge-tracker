@@ -1,0 +1,200 @@
+/* 20-import-review-v9.css - v9.0 / v9.5 - import review interaction and information hierarchy.
+   Part of an ordered set; see css/README.md. Load order is load-bearing. */
+
+/* v9.0 — import review interaction */
+#importMatchesModal {
+  z-index:60;
+}
+#importMatchesModal .modal-backdrop {
+  z-index:0;
+  pointer-events:auto;
+}
+#importMatchesModal .modal-card {
+  z-index:1;
+  pointer-events:auto;
+}
+#importMatchesModal button {
+  pointer-events:auto;
+}
+#importMatchesModal #confirmImportMatchesBtn:disabled {
+  opacity:.55;
+  cursor:not-allowed;
+}
+/* v9.5 — import review information hierarchy and scroll polish */
+#importMatchesModal .import-matches-card {
+  height:min(92dvh,900px);
+  max-height:92dvh;
+}
+#importMatchesModal .modal-head {
+  padding:18px 22px 14px;
+  background:#10171f;
+  z-index:3;
+}
+#importMatchesModal .modal-head h2 {
+  margin:3px 0 0;
+}
+#importMatchesSummary {
+  padding:12px 22px!important;
+  gap:10px!important;
+  background:#10171f;
+  z-index:2;
+  border-bottom:1px solid #202c35;
+}
+#importMatchesSummary .import-stat {
+  min-height:66px;
+  padding:11px 14px;
+  border-radius:10px;
+}
+#importMatchesSummary .import-stat span {
+  font-size:9px;
+  letter-spacing:.11em;
+}
+#importMatchesSummary .import-stat b {
+  font-size:22px;
+  margin-top:3px;
+}
+#importMatchesSummary .import-ready-only {
+  min-height:48px;
+  padding:9px 12px!important;
+}
+#importMatchesSummary .import-ready-only span {
+  gap:6px!important;
+}
+#importMatchesPreview {
+  padding:14px 22px 20px!important;
+  overscroll-behavior:contain;
+  scroll-padding-block:14px;
+  background:#0d141a;
+}
+#importMatchesPreview .import-row {
+  display:grid;
+  grid-template-columns:88px minmax(0,1fr) 110px!important;
+  align-items:start;
+  padding:14px 16px!important;
+  margin:0 0 10px;
+  border-radius:12px;
+  background:#0b1218;
+}
+#importMatchesPreview .import-row.ok {
+  border-left:3px solid var(--green);
+}
+#importMatchesPreview .import-row.bad {
+  border-left:3px solid var(--red);
+}
+#importMatchesPreview .import-row-index {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  font-weight:800;
+  color:#9eb0be;
+}
+#importMatchesPreview .import-number-field {
+  display:flex!important;
+  align-items:center;
+  gap:5px!important;
+  color:#718391!important;
+  font-size:9px!important;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+#importMatchesPreview .import-number-field small {
+  white-space:nowrap;
+}
+#importMatchesPreview .import-no-edit {
+  width:52px!important;
+  height:34px!important;
+  padding:6px 8px!important;
+  font-weight:800;
+}
+#importMatchesPreview .import-row-title {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  min-width:0;
+}
+#importMatchesPreview .import-row-title>b {
+  font-size:14px;
+  line-height:1.3;
+}
+#importMatchesPreview .import-row-title i {
+  color:#5f707d;
+  font-style:normal;
+}
+#importMatchesPreview .result-pill {
+  font-size:9px;
+  padding:4px 7px;
+}
+#importMatchesPreview .import-meta-line {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 12px;
+  margin:6px 0 3px;
+}
+#importMatchesPreview .import-meta {
+  color:#9ec3dd;
+  font-size:10px;
+  display:inline-flex;
+  gap:5px;
+  align-items:baseline;
+}
+#importMatchesPreview .import-meta em {
+  color:#718594;
+  font-style:normal;
+}
+#importMatchesPreview .import-meta.reassign {
+  color:#f4c95d;
+}
+#importMatchesPreview .import-match-line {
+  display:block;
+  color:#91a6b5;
+  margin-top:4px;
+}
+#importMatchesPreview .import-errors {
+  margin:7px 0 0;
+  padding-left:17px;
+  font-size:10px;
+  color:#ff6975;
+}
+#importMatchesPreview .import-status {
+  justify-self:end;
+}
+#importMatchesPreview .import-status span {
+  display:inline-flex;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+#importMatchesPreview .ok .import-status span {
+  background:#113026;
+  color:#58dfa0;
+}
+#importMatchesPreview .bad .import-status span {
+  background:#35171d;
+  color:#ff6975;
+}
+#importMatchesModal .modal-actions {
+  z-index:3;
+  padding:12px 22px 14px;
+  background:#10171f;
+}
+@media(max-width:700px) {
+  #importMatchesPreview .import-row {
+    grid-template-columns:72px minmax(0,1fr)!important;
+  }
+  #importMatchesPreview .import-status {
+    grid-column:2;
+    grid-row:1;
+    justify-self:end;
+  }
+  #importMatchesPreview .import-row-main {
+    grid-column:2;
+  }
+  #importMatchesSummary .import-ready-only small {
+    display:block;
+    width:100%;
+  }
+}

@@ -1,0 +1,103 @@
+/* 05-overview.css - Overview page: challenge hero, progress line, rank panel, stat grid.
+   Part of an ordered set; see css/README.md. Load order is load-bearing. */
+
+.active-page {
+  display:block;
+}
+.challenge-hero {
+  display:grid;
+  grid-template-columns:1fr 240px;
+  gap:30px;
+  align-items:center;
+}
+.badge {
+  display:inline-block;
+  background:#29171b;
+  color:#ff9ca4;
+  border:1px solid #53252c;
+  border-radius:99px;
+  padding:5px 9px;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.12em;
+  margin-bottom:12px;
+}
+.challenge-hero h2 {
+  font-size:29px;
+}
+.challenge-hero p {
+  color:var(--muted);
+  margin:7px 0 22px;
+}
+.progress-line {
+  height:7px;
+  background:#080d12;
+  border-radius:99px;
+  overflow:hidden;
+}
+.progress-line span {
+  height:100%;
+  display:block;
+  background:linear-gradient(90deg,var(--red),#ff7c86);
+  width:0;
+}
+.progress-label {
+  display:flex;
+  justify-content:space-between;
+  color:#8d99a4;
+  font-size:11px;
+  margin-top:8px;
+}
+.rank-panel {
+  background:#0a1118;
+  border:1px solid #273441;
+  border-radius:13px;
+  padding:18px;
+  text-align:center;
+}
+.rank-panel small,
+.rank-panel span {
+  display:block;
+  color:var(--muted);
+  font-size:10px;
+}
+.rank-panel strong {
+  display:block;
+  font-size:24px;
+  margin:8px 0 2px;
+}
+.rank-panel b {
+  font-size:18px;
+}
+.rank-panel span {
+  margin-top:8px;
+}
+.stat-grid {
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:12px;
+  margin:16px 0;
+}
+.stat {
+  background:#111820;
+  border:1px solid var(--line);
+  border-radius:13px;
+  padding:16px;
+}
+.stat span {
+  font-size:10px;
+  color:var(--muted);
+  display:block;
+  margin-bottom:5px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.stat b {
+  font-size:20px;
+}
+.grid-2 {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:16px;
+}
