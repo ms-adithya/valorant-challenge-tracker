@@ -3,38 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Local-first Valorant competitive challenge tracker: log matches, follow rank and RR progression, and review per-agent and per-map analytics.">
   <title>VCT — Valorant Challenge Tracker</title>
-  <!-- styles.css was split into ordered partials. Load order is LOAD-BEARING: later files
-       intentionally override earlier ones. See css/README.md before reordering or adding. -->
-  <link rel="stylesheet" href="./css/01-tokens.css">
-  <link rel="stylesheet" href="./css/02-shell-nav.css">
-  <link rel="stylesheet" href="./css/03-typography.css">
-  <link rel="stylesheet" href="./css/04-forms.css">
-  <link rel="stylesheet" href="./css/05-overview.css">
-  <link rel="stylesheet" href="./css/06-recent-lists.css">
-  <link rel="stylesheet" href="./css/07-tables-matrix.css">
-  <link rel="stylesheet" href="./css/08-modals.css">
-  <link rel="stylesheet" href="./css/09-charts.css">
-  <link rel="stylesheet" href="./css/10-challenges.css">
-  <link rel="stylesheet" href="./css/11-backup-compare.css">
-  <link rel="stylesheet" href="./css/12-theme-v5.css">
-  <link rel="stylesheet" href="./css/13-match-footer.css">
-  <link rel="stylesheet" href="./css/14-modal-form-v6.css">
-  <link rel="stylesheet" href="./css/15-chart-motion-v66.css">
-  <link rel="stylesheet" href="./css/16-interactions-v67.css">
-  <link rel="stylesheet" href="./css/17-match-entry-v7.css">
-  <link rel="stylesheet" href="./css/18-dashboard-v76.css">
-  <link rel="stylesheet" href="./css/19-modal-scroll-v89.css">
-  <link rel="stylesheet" href="./css/20-import-review-v9.css">
-  <link rel="stylesheet" href="./css/21-analytics-range.css">
-  <link rel="stylesheet" href="./css/22-comboboxes.css">
-  <link rel="stylesheet" href="./css/23-changelog-topmaps.css">
-  <link rel="stylesheet" href="./css/24-theme-final.css">
-  <link rel="stylesheet" href="./css/25-import-advanced.css">
-  <link rel="stylesheet" href="./css/26-match-filters.css">
-  <link rel="stylesheet" href="./css/27-polish-v101.css">
-  <link rel="stylesheet" href="./css/28-refinements.css">
+  <link rel="stylesheet" href="./styles.css">
+
+
+
+
+
+
+
 </head>
 <body>
 <div class="app-shell">
@@ -103,7 +80,7 @@
         <div class="grid-2">
           <section class="card">
             <div class="section-title compact"><div><p class="kicker">PERFORMANCE TREND</p><h2>Match metrics</h2></div>
-              <div class="chart-controls"><select id="trendRange" class="chart-select" aria-label="Match metric chart range"><option value="auto">Auto range</option><option value="10">Last 10</option><option value="25">Last 25</option><option value="50">Last 50</option><option value="all">All matches</option></select><select id="trendMetric" class="chart-select" aria-label="Match metric"><option value="kd">K/D</option><option value="acs">ACS</option><option value="adr">ADR</option><option value="ddDelta">DDΔ</option><option value="kast">KAST %</option><option value="hs">HS %</option></select></div>
+              <div class="chart-controls"><select id="trendRange" class="chart-select" aria-label="Match metric chart range"><option value="auto">Auto range</option><option value="10">Last 10</option><option value="25">Last 25</option><option value="50">Last 50</option><option value="all">All matches</option></select><select id="trendMetric" class="chart-select"><option value="kd">K/D</option><option value="acs">ACS</option><option value="adr">ADR</option><option value="ddDelta">DDΔ</option><option value="kast">KAST %</option><option value="hs">HS %</option></select></div>
             </div>
             <div id="metricChart" class="line-chart"><div class="empty">Add matches to see performance trends.</div></div>
           </section>
@@ -123,7 +100,7 @@
           <label>Map<select id="matchMapFilter"><option value="">All maps</option></select></label>
           <button id="clearMatchFilters" class="ghost match-filter-clear" type="button">Reset</button><span id="matchFilterCount" class="muted match-filter-count"></span>
         </div>
-        <div class="card table-card"><div class="table-wrap" role="region" aria-label="Match history" tabindex="0"><table><thead><tr><th scope="col">#</th><th scope="col">Result</th><th scope="col">Agent</th><th scope="col">Map</th><th scope="col">Score</th><th scope="col">K/D/A</th><th scope="col">K/D</th><th scope="col">ACS</th><th scope="col">DDΔ</th><th scope="col">RR</th><th scope="col"></th></tr></thead><tbody id="matchRows"></tbody></table></div></div><div class="match-table-meta match-table-meta-bottom"><label>Rows<select id="matchPageSize"><option value="25">25</option><option value="50">50</option><option value="all">All</option></select></label><div id="matchPagination" class="match-pagination"></div></div>
+        <div class="card table-card"><div class="table-wrap" role="region" aria-label="Match history" tabindex="0"><table><thead><tr><th>#</th><th>Result</th><th>Agent</th><th>Map</th><th>Score</th><th>K/D/A</th><th>K/D</th><th>ACS</th><th>DDΔ</th><th>RR</th><th></th></tr></thead><tbody id="matchRows"></tbody></table></div></div><div class="match-table-meta match-table-meta-bottom"><label>Rows<select id="matchPageSize"><option value="25">25</option><option value="50">50</option><option value="all">All</option></select></label><div id="matchPagination" class="match-pagination"></div></div>
       </section>
 
       <section id="analytics" class="page">
@@ -323,8 +300,7 @@
   <div class="modal-card">
     <div class="modal-head"><div><p class="kicker">MATCH ENTRY</p><h2 id="matchTitle">Add match</h2><p id="matchSubtitle" class="modal-subtitle">Record the result, rank movement and performance stats.</p></div><button class="close" type="button" data-close>×</button></div>
     <form id="matchForm" class="match-grid" novalidate><input id="editNo" type="hidden"><div class="match-context wide"><span id="matchNumberBadge">MATCH #1</span><label class="match-number-edit">Match number <input id="matchNo" type="number" min="1" step="1" required></label><span>Match numbers must be unique.</span></div><div id="matchValidation" class="match-validation hidden" role="alert" aria-live="polite"></div>
-      <div class="agent-field combo-field">
-        <label class="combo-label" for="agent">Agent</label>
+      <label class="agent-field">Agent
         <div class="agent-combobox" id="agentCombobox">
           <input id="agent" type="text" readonly autocomplete="off" placeholder="Select agent" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="agentDropdown">
           <div id="agentDropdown" class="agent-dropdown hidden">
@@ -332,27 +308,24 @@
             <div id="agentOptions" class="agent-options" role="listbox" aria-label="Agents"></div>
           </div>
         </div>
-      </div>
-      <div class="map-field combo-field">
-        <label class="combo-label" for="map">Map</label>
+      </label>
+      <label class="map-field">Map
         <div class="map-combobox" id="mapCombobox">
           <input id="map" type="text" readonly autocomplete="off" placeholder="Select map" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="mapDropdown">
           <div id="mapDropdown" class="map-dropdown hidden" role="listbox" aria-label="Maps">
             <div id="mapOptions" class="map-options"></div>
           </div>
         </div>
-      </div>
-      <div class="result-field combo-field">
-        <label class="combo-label" for="result">Result</label>
+      </label>
+      <label class="result-field">Result
         <div class="result-combobox" id="resultCombobox">
           <input id="result" type="text" readonly value="Win" autocomplete="off" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="resultDropdown">
           <div id="resultDropdown" class="rank-dropdown hidden">
             <div id="resultOptions" class="rank-options" role="listbox" aria-label="Result"></div>
           </div>
         </div>
-      </div>
-      <div class="rank-after-field combo-field">
-        <label class="combo-label" for="rankAfter">Rank after</label>
+      </label>
+      <label class="rank-after-field">Rank after
         <div class="rank-combobox" id="rankAfterCombobox">
           <input id="rankAfter" type="text" readonly required autocomplete="off" placeholder="Choose rank" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="rankAfterDropdown">
           <div id="rankAfterDropdown" class="rank-dropdown hidden">
@@ -360,16 +333,15 @@
             <div id="rankAfterOptions" class="rank-options" role="listbox" aria-label="Ranks"></div>
           </div>
         </div>
-      </div>
-      <div class="rank-status-field combo-field">
-        <label class="combo-label" for="rankStatus">Rank status</label>
+      </label>
+      <label class="rank-status-field">Rank status
         <div class="rank-status-combobox" id="rankStatusCombobox">
           <input id="rankStatus" type="text" readonly value="Same Rank" autocomplete="off" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="rankStatusDropdown">
           <div id="rankStatusDropdown" class="rank-dropdown hidden">
             <div id="rankStatusOptions" class="rank-options" role="listbox" aria-label="Rank status"></div>
           </div>
         </div>
-      </div>
+      </label>
       <div class="score-box"><label class="score-field">Your score<input id="myScore" type="number" min="0" required></label><span class="score-separator" aria-hidden="true">:</span><label class="score-field">Enemy score<input id="enemyScore" type="number" min="0" required></label></div>
       <label>Kills<input id="kills" type="number" min="0" required></label>
       <label>Deaths<input id="deaths" type="number" min="0" required></label>
@@ -416,45 +388,7 @@
   </div>
 </div>
 
-  <!-- app.js was split into ordered modules. These are classic scripts (not type="module") on
-       purpose: they share one global scope, run synchronously in this exact document position,
-       and keep the inline onclick handlers working. Order is load-bearing - do not reorder. -->
-  <script src="./js/constants.js"></script>
-  <script src="./js/dom-utils.js"></script>
-  <script src="./js/rank-utils.js"></script>
-  <script src="./js/combobox-entities.js"></script>
-  <script src="./js/combobox-status.js"></script>
-  <script src="./js/combobox-result.js"></script>
-  <script src="./js/storage.js"></script>
-  <script src="./js/challenge-progress.js"></script>
-  <script src="./js/persistence.js"></script>
-  <script src="./js/rank-progression.js"></script>
-  <script src="./js/challenge-state.js"></script>
-  <script src="./js/match-modal.js"></script>
-  <script src="./js/dialogs.js"></script>
-  <script src="./js/rank-rules.js"></script>
-  <script src="./js/navigation.js"></script>
-  <script src="./js/match-dataset.js"></script>
-  <script src="./js/chart.js"></script>
-  <script src="./js/render.js"></script>
-  <script src="./js/overview-panels.js"></script>
-  <script src="./js/match-table.js"></script>
-  <script src="./js/analytics-panels.js"></script>
-  <script src="./js/analytics-insights.js"></script>
-  <script src="./js/challenge-archive.js"></script>
-  <script src="./js/challenge-report.js"></script>
-  <script src="./js/challenge-actions.js"></script>
-  <script src="./js/setup-form.js"></script>
-  <script src="./js/match-validation.js"></script>
-  <script src="./js/match-save.js"></script>
-  <script src="./js/challenge-options.js"></script>
-  <script src="./js/app-controls.js"></script>
-  <script src="./js/import-parse.js"></script>
-  <script src="./js/import-preview.js"></script>
-  <script src="./js/import-commit.js"></script>
-  <script src="./js/export.js"></script>
-  <script src="./js/match-table-controls.js"></script>
-  <script src="./js/bootstrap.js"></script>
+  <script src="./app.js"></script>
 
 
 
