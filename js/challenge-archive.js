@@ -13,7 +13,7 @@ function renderArchive(){
    const safeProgress=escapeHtml(challengeProgressText(c,{history:true}));
    const safeStartRank=escapeHtml(c.startRank);
    const safeTargetRank=escapeHtml(c.targetRank||"No target");
-   const exportBtn=completed?`<button class="ghost report-export-btn" type="button" onclick="openChallengeReport('${safeId}')">Export report</button>`:"";
+   const exportBtn=completed?`<button class="ghost report-export-btn" type="button" onclick="downloadChallengeReportPDF('${safeId}')">Download report</button>`:"";
    return `<div class="challenge-item ${selected?"selected-challenge":""} ${completed?"completed-challenge":""}"><div><span class="status ${completed?"completed":(isActive?"":"archived")}">${safeStatus}</span><h3>${safeName}</h3><p>${safeProgress} · ${safeStartRank} → target ${safeTargetRank}</p></div><div class="actions">${exportBtn}${isActive
     ? `<button class="ghost" type="button" onclick="openActiveChallenge('${safeId}')">Open</button><button class="ghost" type="button" onclick="archiveActiveChallenge('${safeId}')">Archive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteActiveById('${safeId}')">Delete</button>`
     : `<button class="ghost" type="button" onclick="unarchiveChallenge(${archiveIndex})">Unarchive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteArchivedChallenge(${archiveIndex})">Delete</button>`}</div></div>`;
