@@ -184,6 +184,14 @@
   border-top:1px solid #222d34;
   padding-top:16px;
 }
+/* `display:grid` above outranks the UA rule that hides a closed <details>, so
+   without this the collapsed fields stay laid out and are merely clipped by the
+   `overflow:hidden` on .advanced-options. They are invisible and correctly
+   skipped by Tab either way, but they keep reporting real client rects, which
+   misleads any code that infers visibility from layout. */
+.advanced-options:not([open]) .advanced-grid {
+  display:none;
+}
 .advanced-grid label {
   min-width:0;
 }

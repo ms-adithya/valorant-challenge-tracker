@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="./css/26-match-filters.css">
   <link rel="stylesheet" href="./css/27-polish-v101.css">
   <link rel="stylesheet" href="./css/28-refinements.css">
+  <link rel="stylesheet" href="./css/30-modal-keyboard.css">
 </head>
 <body>
 <div class="app-shell">
@@ -322,7 +323,7 @@
   <div class="modal-backdrop" data-close></div>
   <div class="modal-card">
     <div class="modal-head"><div><p class="kicker">MATCH ENTRY</p><h2 id="matchTitle">Add match</h2><p id="matchSubtitle" class="modal-subtitle">Record the result, rank movement and performance stats.</p></div><button class="close" type="button" data-close>×</button></div>
-    <form id="matchForm" class="match-grid" novalidate><input id="editNo" type="hidden"><div class="match-context wide"><span id="matchNumberBadge">MATCH #1</span><label class="match-number-edit">Match number <input id="matchNo" type="number" min="1" step="1" required></label><span>Match numbers must be unique.</span></div><div id="matchValidation" class="match-validation hidden" role="alert" aria-live="polite"></div>
+    <form id="matchForm" class="match-grid" novalidate><input id="editNo" type="hidden"><div class="match-context wide"><span id="matchNumberBadge">MATCH #1</span><label class="match-number-edit">Match number <input id="matchNo" type="number" min="1" step="1" required></label><span>Match numbers must be unique.</span><span class="key-hint"><kbd>Alt</kbd> + arrow keys to move between fields</span></div><div id="matchValidation" class="match-validation hidden" role="alert" aria-live="polite"></div>
       <div class="agent-field combo-field">
         <label class="combo-label" for="agent">Agent</label>
         <div class="agent-combobox" id="agentCombobox">
@@ -431,6 +432,7 @@
   <script src="./js/rank-progression.js"></script>
   <script src="./js/challenge-state.js"></script>
   <script src="./js/match-modal.js"></script>
+  <script src="./js/match-modal-keys.js"></script>
   <script src="./js/dialogs.js"></script>
   <script src="./js/rank-rules.js"></script>
   <script src="./js/navigation.js"></script>
