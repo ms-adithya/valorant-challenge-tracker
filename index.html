@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="./css/26-match-filters.css">
   <link rel="stylesheet" href="./css/27-polish-v101.css">
   <link rel="stylesheet" href="./css/28-refinements.css">
+  <link rel="stylesheet" href="./css/29-setup-restore.css">
 </head>
 <body>
 <div class="app-shell">
@@ -70,6 +71,18 @@
         <label class="wide"><span class="label-row"><span>Description</span><span class="optional-badge">Optional</span></span><input id="description" placeholder="Add challenge rules or a short note"></label>
         <div id="storageNotice" class="storage-notice wide hidden"></div><div class="setup-actions wide"><button id="cancelNewChallenge" class="ghost hidden" type="button">Cancel</button><button class="primary" type="submit">Start challenge</button></div>
       </form>
+    </section>
+
+    <section id="setupArchiveAccess" class="setup-restore card hidden">
+      <div class="section-title"><div><p class="kicker">RESTORE</p><h2>Bring back a challenge</h2></div><p>Reopen a challenge you archived earlier, or import a backup file.</p></div>
+      <div id="setupArchiveBlock" class="hidden">
+        <p class="setup-restore-label">Archived challenges</p>
+        <div id="setupArchiveList" class="challenge-list"></div>
+      </div>
+      <div class="setup-restore-import">
+        <div><b>Import backup file</b><p class="muted">Replaces every challenge, match and archived challenge in this browser.</p></div>
+        <label class="ghost file-btn">Choose file<input id="setupRestoreInput" type="file" accept=".json,application/json"></label>
+      </div>
     </section>
 
     <div id="app" class="hidden">
@@ -172,7 +185,7 @@
       <section id="challenges" class="page">
         <div class="section-title page-head"><div><p class="kicker">ARCHIVE</p><h2>Challenge history</h2></div><button id="newChallengePage" class="primary" type="button">+ New challenge</button></div>
         <div class="backup-bar card">
-  <div><p class="kicker">DATA PORTABILITY</p><h3>Backup & restore</h3><p class="muted">Export all challenges and matches as JSON, or restore a previous backup.</p></div>
+  <div><p class="kicker">DATA PORTABILITY</p><h3>Backup & restore</h3><p class="muted">Export all challenges and matches as JSON. Importing a backup replaces every challenge and archive in this browser.</p></div>
   <div class="actions"><button id="backupBtn" class="ghost">Export backup</button><label class="ghost file-btn">Import backup<input id="restoreInput" type="file" accept=".json,application/json"></label></div>
 </div>
 <div id="challengeArchive" class="challenge-list"></div>
@@ -449,6 +462,7 @@
   <script src="./js/match-save.js"></script>
   <script src="./js/challenge-options.js"></script>
   <script src="./js/app-controls.js"></script>
+  <script src="./js/setup-restore.js"></script>
   <script src="./js/import-parse.js"></script>
   <script src="./js/import-preview.js"></script>
   <script src="./js/import-commit.js"></script>

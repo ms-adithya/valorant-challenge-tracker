@@ -32,7 +32,7 @@ window.deleteArchivedChallenge=async (archiveIndex)=>{
  try{persist()}catch(err){console.error(err);showAppNotice("Could not update browser storage after deleting the archived challenge.","Storage error");}
  renderArchive();
  renderArchiveBrowser();
- if($("setupArchiveAccess"))$("setupArchiveAccess").classList.toggle("hidden",archives.length===0&&activeChallenges.length===0);
+ if(window.renderSetupRestore)renderSetupRestore();
  if(archives.length===0)closeArchiveBrowser();
 };
 window.archiveCurrent=async ()=>{if(!data)return;await archiveActiveChallenge(data.id);};
