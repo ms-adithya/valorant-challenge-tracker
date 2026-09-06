@@ -4,10 +4,10 @@ function render(){
  const active=!!data;$("setup").classList.toggle("hidden",active);$("app").classList.toggle("hidden",!active);
  if(!active){
    document.querySelectorAll(".page").forEach(x=>x.classList.remove("active-page"));
-   if($("setupArchiveAccess"))$("setupArchiveAccess").classList.toggle("hidden",archives.length===0&&activeChallenges.length===0);
+   if(window.renderSetupRestore)renderSetupRestore();
    return
  }
- if($("setupArchiveAccess"))$("setupArchiveAccess").classList.add("hidden");
+ if(window.renderSetupRestore)renderSetupRestore();
  const activePage=document.querySelector(".page.active-page");
  if(!activePage)showPage("overview");
  const ms=data.matches,c=cur(),wins=ms.filter(m=>m.result==="Win").length,losses=ms.filter(m=>m.result==="Loss").length,draws=ms.filter(m=>m.result==="Draw").length,rrChanges=ms.map(m=>optionalNumber(m.rrChange)).filter(v=>v!==null),net=rrChanges.reduce((s,v)=>s+v,0);

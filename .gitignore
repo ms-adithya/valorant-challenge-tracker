@@ -1,0 +1,6 @@
+# Claude Code local workspace. Holds launch config and, under worktrees/,
+# full git worktree checkouts of this repo - never commit these.
+.claude/
+
+# macOS
+.DS_Store

@@ -1,0 +1,49 @@
+/* 29-setup-restore.css - Empty-state restore panel shown under the create-challenge form.
+   Part of an ordered set; see css/README.md. Load order is load-bearing. */
+
+.setup-restore {
+  margin-top:18px;
+}
+.setup-restore.hidden,
+.setup-restore .hidden {
+  display:none!important;
+}
+.setup-restore .section-title {
+  margin-bottom:14px;
+}
+.setup-restore-label {
+  margin:0 0 10px;
+  font-size:10px;
+  font-weight:750;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:#747d85;
+}
+.setup-restore .challenge-list {
+  display:grid;
+  gap:10px;
+}
+.setup-restore-import {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid #24292e;
+}
+.setup-restore-import b {
+  display:block;
+  font-size:12px;
+  color:#d7dade;
+}
+.setup-restore-import p {
+  margin:4px 0 0;
+  font-size:10px;
+}
+@media(max-width:650px) {
+  .setup-restore-import {
+    align-items:stretch;
+    flex-direction:column;
+  }
+}
