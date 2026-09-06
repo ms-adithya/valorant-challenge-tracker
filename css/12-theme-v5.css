@@ -1,0 +1,471 @@
+/* 12-theme-v5.css - v5.3 / v5.4 - black+red then calmer tactical theme repaint.
+   Part of an ordered set; see css/README.md. Load order is load-bearing. */
+
+/* v5.3 — black + red visual system */
+body {
+  background:
+    radial-gradient(circle at 78% -15%,rgba(225,6,0,.10) 0,rgba(225,6,0,0) 27%),
+    #050505;
+}
+.sidebar {
+  background:#070708;
+  border-right-color:#202022;
+}
+header {
+  border-bottom-color:#202022;
+}
+.card {
+  background:linear-gradient(145deg,rgba(14,14,15,.98),rgba(8,8,9,.98));
+  border-color:#28282b;
+}
+.nav:hover,
+.nav.active {
+  background:#151516;
+  color:#fff;
+}
+.primary {
+  background:#e10600;
+  color:#fff;
+}
+.primary:hover {
+  background:#ff1b14;
+}
+.brand-mark {
+  background:#e10600;
+}
+.kicker {
+  color:#ff302b;
+}
+.badge {
+  background:#210706;
+  color:#ff4b45;
+  border-color:#5b1512;
+}
+.rank-panel,
+.insight,
+.compare {
+  background:#080809;
+  border-color:#27272a;
+}
+input,
+select {
+  background:#080809;
+  border-color:#2c2c2f;
+  color:#f5f5f5;
+}
+input:focus,
+select:focus {
+  border-color:#e10600;
+  box-shadow:0 0 0 2px rgba(225,6,0,.10);
+}
+select option {
+  background:#0b0b0c;
+  color:#f5f5f5;
+}
+.ghost {
+  background:#111112;
+  border-color:#303034;
+  color:#dedede;
+}
+.ghost:hover {
+  border-color:#55555a;
+  background:#161617;
+}
+.danger {
+  color:#ff4a45;
+}
+.progress-line,
+.track,
+.result-track,
+.hbar-track {
+  background:#020202;
+}
+.progress-line span,
+.track i,
+.hbar-fill {
+  background:linear-gradient(90deg,#b90400,#e10600);
+}
+.chart-path {
+  stroke:#e10600;
+}
+.chart-area {
+  fill:rgba(225,6,0,.09);
+}
+.chart-point {
+  fill:#e10600;
+  stroke:#080809;
+}
+.result-row.loss .result-fill {
+  background:#e10600;
+}
+.result-row.win .result-fill {
+  background:#36c978;
+}
+.result-row.draw .result-fill {
+  background:#e7b94a;
+}
+.optional-badge {
+  background:#111112;
+  border-color:#303034;
+  color:#9a9a9f;
+}
+.challenge-item,
+.recent {
+  background:#09090a;
+  border-color:#252528;
+}
+.table-card {
+  background:#09090a;
+}
+th,
+td {
+  border-bottom-color:#232326;
+}
+.modal-card {
+  background:#0a0a0b;
+  border-color:#303034;
+}
+.modal-backdrop {
+  background:rgba(0,0,0,.84);
+}
+.riot-disclaimer {
+  margin:14px 8px 0;
+  padding-top:14px;
+  border-top:1px solid #222225;
+  color:#68686d;
+  font-size:9px;
+  line-height:1.45;
+}
+@media(max-width:760px) {
+  .riot-disclaimer {
+    display:none;
+  }
+}
+/* v5.4 calmer tactical theme */
+body {
+  background:radial-gradient(circle at 76% -10%,rgba(216,58,63,.055),transparent 28%),linear-gradient(180deg,#0a0c0e,#080a0c 55%,#090b0d);
+}
+.sidebar {
+  background:#0b0d0f;
+  border-right-color:#25292d;
+}
+.card {
+  background:linear-gradient(145deg,#121518,#0e1113);
+  border-color:#2a2f34;
+  box-shadow:0 18px 48px rgba(0,0,0,.16);
+}
+.primary {
+  background:#d83a3f;
+  box-shadow:0 5px 18px rgba(216,58,63,.12);
+}
+.primary:hover {
+  background:#e34a4f;
+}
+.kicker {
+  color:#e95b60;
+}
+.brand-mark {
+  background:#d83a3f;
+}
+.nav:hover,
+.nav.active {
+  background:#171b1f;
+}
+input,
+select {
+  background:#0c0f11;
+  border-color:#30363b;
+}
+input:focus,
+select:focus {
+  border-color:#b94b4f;
+  box-shadow:0 0 0 3px rgba(216,58,63,.07);
+}
+.badge {
+  background:#241416;
+  color:#e7787c;
+  border-color:#4b292c;
+}
+.ghost {
+  background:#15191d;
+  border-color:#30363b;
+}
+.progress-line span,
+.track i,
+.hbar-fill {
+  background:linear-gradient(90deg,#a92f34,#d83a3f);
+}
+.chart-path {
+  stroke:#df555a;
+}
+.chart-area {
+  fill:rgba(216,58,63,.055);
+}
+.chart-point {
+  fill:#df555a;
+}
+.chart-grid-line {
+  stroke:#282d32;
+  stroke-dasharray:3 5;
+}
+.chart-axis-label {
+  fill:#717981;
+}
+.stat {
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(145deg,#15191d,#111417);
+  border-color:#2b3035;
+}
+.stat:before {
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:2px;
+  background:#9b3438;
+}
+.stat span {
+  color:#818991;
+}
+.rank-panel {
+  background:linear-gradient(160deg,#15191d,#0d1012);
+  border-color:#30363b;
+  padding:20px;
+}
+.rank-emblem {
+  width:58px;
+  height:58px;
+  margin:12px auto 9px;
+  display:grid;
+  place-items:center;
+  clip-path:polygon(50% 0,94% 25%,82% 78%,50% 100%,18% 78%,6% 25%);
+  background:linear-gradient(145deg,#873438,#c85458);
+  color:#fff;
+  font-weight:900;
+  font-size:18px;
+}
+.recent {
+  background:#101417;
+  border-color:#292f34;
+  transition:.15s;
+}
+.recent:hover {
+  transform:translateY(-1px);
+  border-color:#3a4147;
+}
+.result-dot.win {
+  background:#153026;
+  color:#69d8a5;
+}
+.result-dot.loss {
+  background:#31191b;
+  color:#ec7a7e;
+}
+.agent-card,
+.map-card {
+  display:grid;
+  grid-template-columns:42px 1fr auto;
+  gap:11px;
+  align-items:center;
+  padding:10px 0;
+  border-bottom:1px solid #24292e;
+}
+.agent-card:last-child,
+.map-card:last-child {
+  border-bottom:0;
+}
+.agent-avatar,
+.map-avatar {
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(145deg,#20262b,#121619);
+  border:1px solid #343b41;
+  color:#e6e8ea;
+  font-weight:850;
+  font-size:11px;
+}
+.agent-avatar {
+  clip-path:polygon(50% 0,95% 22%,88% 82%,50% 100%,12% 82%,5% 22%);
+}
+.map-avatar {
+  border-radius:9px;
+}
+.entity-copy b,
+.entity-copy span {
+  display:block;
+}
+.entity-copy span {
+  color:#7e8790;
+  font-size:10px;
+  margin-top:3px;
+}
+.entity-metric {
+  text-align:right;
+}
+.entity-metric b {
+  display:block;
+  font-size:12px;
+}
+.entity-metric span {
+  font-size:9px;
+  color:#777f87;
+}
+.hbar-track {
+  height:9px;
+}
+.hbar-fill {
+  background:linear-gradient(90deg,#813035,#c7474c);
+}
+.optional-badge {
+  background:#171b1f;
+  border-color:#31373c;
+  color:#838b93;
+}
+.hero-topline {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.compact-btn {
+  padding:7px 10px;
+  font-size:10px;
+}
+.small-modal {
+  width:min(460px,100%);
+}
+.challenge-option-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:20px;
+}
+.danger-zone {
+  color:#e56a6e;
+  border-color:#593236;
+  background:#1a1113;
+}
+.danger-zone:hover {
+  background:#251416;
+  border-color:#7a3b40;
+}
+#addMatchTop.hidden {
+  display:none!important;
+}
+.modal {
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:grid;
+  place-items:center;
+  padding:24px;
+}
+.modal.hidden {
+  display:none!important;
+}
+.modal-card {
+  max-height:min(88vh,900px);
+  overflow:auto;
+}
+.modal-subtitle {
+  margin:5px 0 0;
+  color:#7f8891;
+  font-size:11px;
+}
+.match-context {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  border:1px solid #292f34;
+  background:#0c0f11;
+  border-radius:9px;
+  color:#727b84;
+  font-size:10px;
+}
+.match-context span:first-child {
+  color:#e06a6e;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+#saveMatchBtn {
+  min-width:130px;
+}
+.table-card .delete {
+  white-space:nowrap;
+}
+.match-action-group {
+  display:flex;
+  gap:6px;
+}
+.edit-match-btn {
+  color:#d9dde0;
+  border-color:#343a40;
+  background:#14181b;
+}
+.edit-match-btn:hover {
+  border-color:#555d64;
+}
+.setup-archive-access {
+  margin-top:16px;
+  padding:14px 16px;
+  border:1px solid #2b3035;
+  border-radius:11px;
+  background:#0d1012;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.setup-archive-access.hidden {
+  display:none!important;
+}
+.setup-archive-access span,
+.setup-archive-access small {
+  display:block;
+}
+.setup-archive-access span {
+  font-weight:750;
+  font-size:11px;
+  color:#d7dade;
+}
+.setup-archive-access small {
+  margin-top:4px;
+  color:#747d85;
+  font-size:10px;
+}
+.archive-browser-card {
+  width:min(680px,100%);
+}
+.archive-restore-row {
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px;
+  align-items:center;
+  padding:14px;
+  border:1px solid #292f34;
+  border-radius:10px;
+  background:#0d1012;
+}
+.archive-restore-row h3 {
+  margin:0 0 4px;
+  font-size:13px;
+}
+.archive-restore-row p {
+  margin:0;
+  color:#78818a;
+  font-size:10px;
+}
+@media(max-width:650px) {
+  .setup-archive-access,
+  .archive-restore-row {
+    align-items:stretch;
+    grid-template-columns:1fr;
+    flex-direction:column;
+  }
+}

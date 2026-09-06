@@ -1,0 +1,175 @@
+/* 14-modal-form-v6.css - v6.3 / v6.5 - popup reliability and match-form field hierarchy.
+   Part of an ordered set; see css/README.md. Load order is load-bearing. */
+
+/* v6.3 popup and match-toolbar reliability */
+#modal.modal {
+  position:fixed!important;
+  inset:0!important;
+  z-index:5000!important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(0,0,0,.56);
+  backdrop-filter:blur(5px);
+}
+#modal.modal.hidden {
+  display:none!important;
+}
+#modal .modal-backdrop {
+  position:absolute;
+  inset:0;
+}
+#modal .modal-card {
+  position:relative;
+  z-index:1;
+  width:min(980px,calc(100vw - 40px));
+  max-height:90vh;
+  overflow:auto;
+  background:#111416;
+  border:1px solid #30363b;
+  border-radius:16px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55);
+}
+#matches .section-title,
+#matches .table-toolbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+#matches #addMatchBtn {
+  display:inline-flex!important;
+}
+/* v6.5 readability + form hierarchy */
+body {
+  font-size:15px;
+}
+label,
+.combo-field {
+  font-size:12px;
+  line-height:1.35;
+}
+input,
+select,
+textarea {
+  font-size:14px;
+  min-height:44px;
+  padding:10px 12px;
+}
+select option {
+  font-size:15px;
+}
+.modal-card {
+  font-size:14px;
+}
+.match-grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+}
+.match-grid label,
+.match-grid .combo-field {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+.match-grid .wide {
+  grid-column:1/-1;
+}
+#modal .modal-card {
+  width:min(1080px,calc(100vw - 36px));
+}
+#modal .modal-head h2 {
+  font-size:24px;
+}
+#modal .modal-subtitle {
+  font-size:12px;
+}
+#modal .combo-field:has(#agent) {
+  order:10;
+}
+#modal .combo-field:has(#map) {
+  order:11;
+}
+#modal .combo-field:has(#result) {
+  order:12;
+}
+#modal label:has(#myScore) {
+  order:13;
+}
+#modal label:has(#enemyScore) {
+  order:14;
+}
+#modal .combo-field:has(#rankStatus) {
+  order:20;
+}
+#modal .combo-field:has(#rankAfter) {
+  order:21;
+}
+#modal label:has(#rrAfter) {
+  order:22;
+}
+#modal label:has(#rrChange) {
+  order:23;
+}
+#modal label:has(#kills) {
+  order:30;
+}
+#modal label:has(#deaths) {
+  order:31;
+}
+#modal label:has(#assists) {
+  order:32;
+}
+#modal label:has(#acs) {
+  order:40;
+}
+#modal label:has(#adr) {
+  order:41;
+}
+#modal label:has(#ddDelta) {
+  order:42;
+}
+#modal label:has(#hs) {
+  order:43;
+}
+#modal label:has(#kast) {
+  order:44;
+}
+#modal label:has(#firstKills) {
+  order:50;
+}
+#modal label:has(#firstDeaths) {
+  order:51;
+}
+#modal label:has(#multiKills) {
+  order:52;
+}
+#modal label:has(#rounds) {
+  order:53;
+}
+#modal label:has(#notes) {
+  order:60;
+  grid-column:1/-1;
+}
+#modal .match-context {
+  order:0;
+}
+#modal .form-actions {
+  order:100;
+  grid-column:1/-1;
+}
+@media(max-width:900px) {
+  .match-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:560px) {
+  .match-grid {
+    grid-template-columns:1fr;
+  }
+  #modal label:has(#notes) {
+    grid-column:auto;
+  }
+}
