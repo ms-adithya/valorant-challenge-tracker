@@ -18,7 +18,7 @@ function initAgentCombobox(){
  field.addEventListener("click",()=>drop.classList.contains("hidden")?open():close());
  field.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "||e.key==="ArrowDown"){e.preventDefault();open();}});
  search.addEventListener("input",()=>render(search.value));
- search.addEventListener("keydown",e=>{if(e.key==="ArrowDown"){e.preventDefault();move(1)}else if(e.key==="ArrowUp"){e.preventDefault();move(-1)}else if(e.key==="Enter"){e.preventDefault();const list=visible();if(list.length)choose((list[active>=0?active:0]).dataset.agent)}else if(e.key==="Escape"){e.preventDefault();close();field.focus();}});
+ search.addEventListener("keydown",e=>{if(e.key==="ArrowDown"){e.preventDefault();move(1)}else if(e.key==="ArrowUp"){e.preventDefault();move(-1)}else if(e.key==="Enter"){e.preventDefault();const list=visible();if(list.length)choose((list[active>=0?active:0]).dataset.agent)}else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();close();field.focus();}});
  options.addEventListener("click",e=>{const b=e.target.closest(".agent-option");if(b)choose(b.dataset.agent)});
  document.addEventListener("pointerdown",e=>{if(!combo.contains(e.target))close()});
  render();
@@ -35,9 +35,21 @@ function initMapCombobox(){
  function open(){render();drop.classList.remove("hidden");field.setAttribute("aria-expanded","true");active=-1;}
  function close(){drop.classList.add("hidden");field.setAttribute("aria-expanded","false");active=-1;}
  function choose(name){field.value=name;field.dispatchEvent(new Event("change",{bubbles:true}));render();close();field.focus();}
- function move(delta){const list=visible();if(!list.length)return;active=(active+delta+list.length)%list.length;list.forEach((x,i)=>x.classList.toggle("active",i===active));list[active].scrollIntoView({block:"nearest"});}
+ function highlight(i){const list=visible();if(!list.length)return;active=i;list.forEach((x,n)=>x.classList.toggle("active",n===active));list[active].scrollIntoView({block:"nearest"});}
+ function move(delta){const list=visible();if(!list.length)return;highlight((active+delta+list.length)%list.length);}
+ // Commit the highlighted option, defaulting to the first one when the list
+ // was opened but never arrowed through.
+ function chooseActive(){const list=visible();if(!list.length)return;choose(list[active>=0?active:0].dataset.map);}
  field.addEventListener("click",()=>drop.classList.contains("hidden")?open():close());
- field.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "||e.key==="ArrowDown"){e.preventDefault();if(drop.classList.contains("hidden"))open();else move(1)}else if(e.key==="ArrowUp"&&!drop.classList.contains("hidden")){e.preventDefault();move(-1)}else if(e.key==="Escape"){close()}});
+ field.addEventListener("keydown",e=>{
+  const isOpen=!drop.classList.contains("hidden");
+  if(e.key==="Enter"||e.key===" "){e.preventDefault();isOpen?chooseActive():open()}
+  else if(e.key==="ArrowDown"){e.preventDefault();isOpen?move(1):open()}
+  else if(e.key==="ArrowUp"&&isOpen){e.preventDefault();move(-1)}
+  else if(e.key==="Home"&&isOpen){e.preventDefault();highlight(0)}
+  else if(e.key==="End"&&isOpen){e.preventDefault();highlight(visible().length-1)}
+  else if(e.key==="Escape"&&isOpen){e.stopPropagation();close()}
+ });
  options.addEventListener("click",e=>{const b=e.target.closest(".map-option");if(b)choose(b.dataset.map)});
  document.addEventListener("pointerdown",e=>{if(!combo.contains(e.target))close()});
  render();
