@@ -186,11 +186,32 @@
       <h2>Changelog</h2>
       <p class="muted">Patch notes, fixes and major feature updates for Valorant Challenge Tracker.</p>
     </div>
-    <span class="version-pill">Current v10.1</span>
+    <span class="version-pill">Current v10.2</span>
   </div>
 
   <div class="update-feed">
     <details class="update-card major" open>
+      <summary><span><strong>v10.2 — Reports &amp; keyboard navigation</strong><small>Major update · PDF reports, data recovery &amp; keyboard access</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <h4>Added</h4>
+        <ul>
+          <li>Completed challenges now download a formatted PDF report directly, replacing the printable window that pop-up blockers could stop and that produced a different document in every browser.</li>
+          <li>Report text stays selectable and searchable, long match histories paginate properly, and every page carries a footer with the challenge name and generation timestamp.</li>
+          <li>A restore panel now appears on the create-challenge screen whenever no challenge is open, so archived challenges and backup files can be recovered without first having an active challenge.</li>
+          <li><strong>Alt</strong> + arrow keys move between fields in the match entry form, following the visual grid rather than DOM order. Plain arrow keys are unchanged and still step number inputs and move the caret.</li>
+        </ul>
+        <h4>Fixed &amp; improved</h4>
+        <ul>
+          <li><strong>Enter</strong> now selects the highlighted option in the map, result and rank comboboxes instead of moving the highlight one row further, so a keyboard user can finally commit their choice.</li>
+          <li><strong>Home</strong> and <strong>End</strong> jump to the first and last option in the combobox dropdowns, which arrow keys alone left unreachable in long lists.</li>
+          <li><strong>Escape</strong> now closes only the open dropdown instead of also dismissing the match entry modal behind it.</li>
+          <li>Importing a backup now states plainly that it replaces every challenge, match and archived challenge stored in this browser, and both import controls share one confirmation.</li>
+          <li>Collapsed Advanced options no longer occupy layout while hidden.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="update-card major">
       <summary><span><strong>v10.1 — Stability &amp; interface polish</strong><small>Patch · Match history, charts &amp; reliability</small></span><span class="update-toggle">⌄</span></summary>
       <div class="update-body"><h4>Fixed &amp; improved</h4><ul>
         <li>Fixed Match History rendering and Sort &amp; Filter reliability, including safe option generation and clearer active-filter feedback.</li>
