@@ -6,20 +6,29 @@ function renderArchiveBrowser(){
 function openArchiveBrowser(){renderArchiveBrowser();$("archiveBrowserModal").classList.remove("hidden")}
 function closeArchiveBrowser(){$("archiveBrowserModal").classList.add("hidden")}
 function showPage(id){
+ const setup=$("setup"),restore=$("setupArchiveAccess"),app=$("app"),changelog=$("changelog");
  if(id==="changelog"){
-   $("setup").classList.add("hidden");
-   $("app").classList.remove("hidden");
+   setup.classList.add("hidden");
+   restore.classList.add("hidden");
+   app.classList.remove("hidden");
    document.querySelectorAll(".page").forEach(page=>page.classList.remove("active-page"));
    document.querySelectorAll(".nav").forEach(btn=>btn.classList.toggle("active",btn.dataset.target===id));
-   $("changelog").classList.add("active-page");
+   changelog.classList.add("active-page");
    window.scrollTo({top:0,behavior:"smooth"});
    return;
  }
  if(!data){
-   $("setup").classList.remove("hidden");
+   app.classList.add("hidden");
+   document.querySelectorAll(".page").forEach(page=>page.classList.remove("active-page"));
+   document.querySelectorAll(".nav").forEach(btn=>btn.classList.toggle("active",btn.dataset.target==="overview"));
+   setup.classList.remove("hidden");
+   if(typeof renderSetupRestore==="function")renderSetupRestore();
    if(id==="challenges")openArchiveBrowser();
    return;
  }
+ setup.classList.add("hidden");
+ restore.classList.add("hidden");
+ app.classList.remove("hidden");
  document.querySelectorAll(".page").forEach(page=>page.classList.remove("active-page"));
  document.querySelectorAll(".nav").forEach(btn=>btn.classList.toggle("active",btn.dataset.target===id));
  const page=$(id);
