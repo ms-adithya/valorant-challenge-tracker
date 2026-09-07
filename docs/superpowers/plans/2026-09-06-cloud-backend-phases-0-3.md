@@ -19,6 +19,14 @@
 - **`persist()` keeps its signature and boolean contract.** It returns `true` when the write was accepted *locally*, never "the server has it". All 13 call sites stay untouched.
 - **Firestore batch limit is 500 operations.** Every batched write must chunk.
 - **Firestore document cap is 1 MiB.** One document per match; never embed `matches[]` in a challenge document.
+- **Conflict ordering is Firestore-authoritative.** Same-document last-write-wins means the
+  write accepted later by Firestore wins; client clocks and `Date.now()` never decide
+  authority. Deletes require a durable tombstone or equivalent server-authoritative
+  revision/precondition mechanism so stale queued offline writes cannot resurrect data.
+- **Match numbering is deterministic.** `matchId` is authoritative identity and `no` is a
+  display ordinal. Duplicate numbers from offline creation or import are reconciled by a
+  stable `matchId` tie-break through the existing import-numbering path, with a visible
+  notice when numbers change.
 - **`localStorage` is copied, never moved.** Keys `vct4`, `vctActiveChallenges`, `vctArchives` retain their names and stay populated.
 - **Enum values, copied verbatim from the codebase:**
   - `result`: `"Win"`, `"Loss"`, `"Draw"`
@@ -166,6 +174,13 @@ git commit -m "docs: record Riot access spike findings and branch verdict"
 **Modified:** `index.html` (one module script tag, account panel markup), `js/persistence.js` (dispatcher), `js/storage.js` (unchanged reads, exported snapshot hook), `js/challenge-actions.js` and `js/challenge-options.js` (id-based handlers), `js/navigation.js` and `js/challenge-archive.js` (call sites for those handlers).
 
 **Why `snapshot-model.js` and `snapshot-diff.js` are separate and Firebase-free:** they carry the highest data-loss risk in the project and must be testable in Node with no emulator, no browser and no network. Keeping Firebase imports out of them is what makes that possible.
+
+**Ownership boundaries:** existing state modules own challenge and match state; the
+client validation modules own data-entry feedback; the cloud persistence/sync layer owns
+Firestore writes behind `persist()`; Firestore, Auth and security rules own cloud
+authority and authorization; rank progression, analytics and reports remain in their
+existing modules; migration owns local-to-cloud conversion; Riot credentials and PUUID
+resolution remain server-only.
 
 ---
 
@@ -973,6 +988,10 @@ test("adding a field counts as a change", () => {
   assert.strictEqual(diffSnapshots(prev, next).updates.length, 1);
 });
 
+// Conflict ordering and delete-resurrection behavior are verified against the
+// Firestore emulator in Task 6/12; this pure test suite must not pretend that
+// client timestamps can model server-authoritative ordering.
+
 test("chunk splits to the Firestore batch limit", () => {
   const items = Array.from({ length: 1100 }, (_, i) => i);
   const parts = chunk(items, 500);
@@ -1061,7 +1080,14 @@ node --test tests/snapshot-diff.test.js
 
 Expected: PASS, 10 tests.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Preserve the conflict boundary**
+
+Keep this pure diff limited to document identity and write-set calculation. It must not
+choose a winner using `Date.now()`, client timestamps, or local array order. Firestore
+ordering, delete protection, and stale-write handling are integration concerns covered
+by Task 6 and Task 12.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add js/cloud/snapshot-diff.js tests/snapshot-diff.test.js
@@ -1346,6 +1372,12 @@ Connects the pure functions to Firestore. After this task the app reads and writ
 })();
 ```
 
+The `batch.delete(ref)` line above is only a write-set placeholder. Before implementing
+Task 6, choose and implement the durable tombstone or equivalent server-authoritative
+revision/precondition mechanism required by the global constraints. Do not ship a plain
+delete path if an older queued offline update can recreate the document. The mechanism
+must not use client timestamps as authority, and it must be covered by an emulator test.
+
 - [ ] **Step 2: Export the Firestore helpers from the boot module**
 
 In `js/cloud/firebase-boot.js`, widen the Firestore import and attach the helpers, then start sync. Replace the existing Firestore import block with:
@@ -1429,7 +1461,17 @@ Then reload the page. Expected: the challenge and match are still present, and t
 
 With the app open, use DevTools → Network → Offline. Add a match. Expected: the save completes instantly with the normal success toast — no spinner, no error. Go back online. Expected: the match appears in the Emulator UI within a few seconds.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Verify conflict ordering and deletion safety**
+
+Using two signed-in emulator profiles, make independent offline edits to two match
+documents and reconnect both. Expected: both edits survive. Then update one match while
+offline, delete that same match from the other profile, and reconnect in both possible
+arrival orders. Expected: the Firestore-authoritative result is deterministic and the
+older queued update never resurrects the deleted document. Repeat for deleting a whole
+challenge and its match subcollection. Do not use client timestamps to determine the
+winner.
+
+- [ ] **Step 8: Commit**
 
 ```bash
 git add js/cloud/cloud-sync.js js/cloud/firebase-boot.js js/persistence.js index.html
@@ -2252,13 +2294,24 @@ Expected: **both edits survive.** This is the payoff of one document per match �
 
 - [ ] **Step 4: Verify a real conflict resolves predictably**
 
-Edit the *same* match's notes on both devices while B is offline, then reconnect. Expected: B's value wins, because it was written to the server last. This is documented last-write-wins behavior, not a bug.
+Edit the *same* match's notes on both devices while B is offline, then reconnect. Expected:
+the value from the write accepted later by Firestore is authoritative. Do not infer the
+winner from either device's clock or a client-generated `updatedAt` value. This is the
+documented server-authoritative conflict policy, not a bug.
 
-- [ ] **Step 5: Run the full regression checklist**
+- [ ] **Step 5: Verify delete conflicts cannot resurrect data**
+
+Queue an update to a match on one device while offline, delete that match from the other
+device, and reconnect in both arrival orders. Expected: the selected Firestore ordering
+result is stable, and an older queued update cannot recreate a document deleted by the
+authoritative delete transition. Repeat for a challenge deletion and confirm its match
+documents do not return.
+
+- [ ] **Step 6: Run the full regression checklist**
 
 Against the deployed or emulated app, signed in: create challenge, add match, edit match, delete match, import a CSV, archive, unarchive, export CSV, export backup JSON, restore a backup, offline write then reconnect. Every one must behave as it did before phase 1.
 
-- [ ] **Step 6: Deploy and commit**
+- [ ] **Step 7: Deploy and commit**
 
 ```bash
 npm run deploy
@@ -3322,6 +3375,7 @@ used consistently after. `offerMerge(signIn)` is defined in Task 10 and reused i
 
 **Known duplication, accepted.** Validation lives in both the client
 ([js/match-save.js](../../../js/match-save.js)) and `firestore.rules`. Spec §5 records the
-coupling; both must change together. Tasks R1 and M1 also repeat the Cloud Functions
+coupling and distinguishes client UX from server authority; both must be reviewed
+together when invariants change. Tasks R1 and M1 also repeat the Cloud Functions
 scaffolding steps, because only one of them will ever be executed and a reader of either
 must not have to consult the other.

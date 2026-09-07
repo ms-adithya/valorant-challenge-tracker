@@ -25,7 +25,8 @@ Goals, in dependency order:
 | Audience | Personal now, architected for public | Multi-tenant schema and real migrations from day one; public-facing polish deferred |
 | Sync model | Local-first, background sync | Preserves instant offline writes, today's core UX property |
 | Platform | Firebase + Node.js Cloud Functions | Firestore's offline persistence supplies the local-first layer as a library feature |
-| Database | Cloud Firestore, one document per match | Firestore resolves conflicts last-write-wins per document, so document granularity *is* the conflict strategy |
+| Database | Cloud Firestore, one document per match | Firestore resolves conflicts at document granularity, so independent match documents can merge without whole-challenge overwrites |
+| Conflict policy | Document-level, Firestore-authoritative ordering | The write accepted later by Firestore wins for the same document; client clocks and client timestamps are never authoritative |
 | Frontend | Stays build-free | Modular SDK loads from gstatic as an ES module; the 41 existing script tags are untouched |
 | Match identity | UUID `matchId`; `no` demoted to a display field | Offline multi-device writes cannot preserve globally-unique user-chosen numbers |
 | First run | Anonymous auth | The app must keep working with no signup, exactly as it does today |
@@ -118,6 +119,43 @@ Consequence: a `persist()` return value continues to mean "the write was accepte
 locally", never "the server has it". That is the correct contract for local-first, and it
 is what every existing call site already assumes.
 
+### 3.4 Conflict and deletion semantics
+
+Conflict resolution is intentionally document-level:
+
+- A match update only competes with other writes to that match document. Updates to
+  different match documents survive independently and are both rehydrated.
+- For concurrent writes to the same document, **last-write-wins means
+  Firestore/server-authoritative ordering**: the write accepted later by Firestore is
+  authoritative. It does not mean "the client with the newest `Date.now()` value wins".
+  Client clocks and client-generated timestamps must never decide authority.
+- A delete is a state transition that must remain visible to later synchronization. It
+  must not be implemented as an unqualified client-side `batch.delete()` if that would
+  allow an older queued offline update to recreate the document. The implementation must
+  use a durable tombstone or an equivalent server-authoritative revision/precondition
+  mechanism, and must retain enough metadata for stale writes to be rejected or ignored.
+- Task 6 is not complete until an emulator test proves that an offline update queued
+  before a delete cannot resurrect the deleted challenge or match. The chosen mechanism
+  must be based on Firestore/server ordering or server-issued metadata, never a client
+  clock.
+
+The exact tombstone/revision representation is an implementation detail, but its
+observable contract is fixed: server-authoritative ordering, no client-clock authority,
+and no delete resurrection.
+
+### 3.5 Ownership boundaries
+
+| Concern | Owner |
+|---|---|
+| Challenge and match state | Existing application state modules |
+| Client validation | `js/match-validation.js` and `js/match-save.js` |
+| Persistent storage and cloud synchronization | Cloud persistence/sync layer behind `persist()` |
+| Cloud authority and authorization | Firestore, Firebase Auth and security rules |
+| Rank and RR derivation | Rank progression modules |
+| Analytics and reports | Existing analytics and report modules |
+| Local-to-cloud migration | Dedicated cloud migration layer |
+| Riot credentials and PUUID resolution | Server-side Cloud Functions only |
+
 ## 4. Data model
 
 ```
@@ -175,14 +213,16 @@ stored display field.
 
 This is a deliberate behavior change. Today `no` *is* the identity, and v9.6 hardened
 "new matches choose the lowest unused positive number" as a feature. Two devices editing
-offline will both allocate the same number; no scheme prevents this without a server
-round-trip, which local-first gives up by definition.
+offline can both allocate the same number; stable `matchId` preserves identity, while
+the display ordinal is reconciled separately.
 
 The resolution reuses machinery the app already has. `assignImportNumbers()` at
 [js/import-preview.js:3](../../../js/import-preview.js) reassigns colliding numbers to
 the next free slot and displays the reason (`"#12 -> #13, 12 already exists"`). Sync
-reconciliation calls the same function and surfaces the same notice. Collisions are rare,
-visible, and user-editable, and require no new UI.
+reconciliation sorts colliding matches by stable `matchId`, preserves the number for the
+first match, and passes the remaining matches through the same reassignment path. It
+surfaces the existing visible notice whenever a number changes. Collisions are rare,
+visible, deterministic, and user-editable, and require no new UI.
 
 Migration assigns each existing match a fresh UUID while preserving its `no` exactly.
 
@@ -227,8 +267,10 @@ match /riotAccounts/{puuid} {
 [js/match-validation.js](../../../js/match-validation.js) and
 [js/match-save.js](../../../js/match-save.js): `hs` and `kast` within 0–100, `rrAfter`
 within 0–100 or null, counters non-negative, `myScore + enemyScore == rounds`, `result`
-consistent with the scores. Client validation stays as the UX layer; rules are the
-integrity layer. Both must be updated together — this duplication is accepted and noted.
+consistent with the scores. Client validation is the UX layer and may be more helpful or
+permissive during data entry; Firestore rules are the authorization and integrity
+authority for non-negotiable invariants. Both must be reviewed together when the schema
+changes, but they are not equivalent authorities.
 
 Rules are tested with the Firebase emulator, including negative cases: a user must not
 read or write another uid's documents.
@@ -399,6 +441,10 @@ scope. The plan introduces only what each phase needs:
 - **Sync diff and migration** — pure functions (snapshot diff, legacy-to-Firestore
   mapping, UUID assignment) extracted so they can be tested in Node without a browser.
   These carry the highest data-loss risk and must be covered.
+- **Conflict behavior** — emulator verification that independent match edits both
+  survive, same-document writes resolve by Firestore/server ordering rather than client
+  timestamps, deletes cannot be resurrected by older queued writes, and duplicate `no`
+  values are deterministically reconciled by stable `matchId`.
 - **Auth flows** — manual test matrix against the emulator, covering anonymous upgrade,
   each collision case in §6.2, and multi-device sign-in.
 - **Regression** — a manual checklist per phase: create challenge, add match, edit match,
@@ -413,8 +459,9 @@ scope. The plan introduces only what each phase needs:
 | Migration data loss | Severe, irreversible | Auto-backup before migrating; copy not move; count verification; migration is idempotent and guarded |
 | Boot-order breakage from async hydration | App fails to render | localStorage synchronous first paint (§3.2); no existing script becomes async |
 | Offline match-number collisions | Wrong numbers shown | Reuse `assignImportNumbers()` reassignment and its existing visible notice |
+| Delete resurrection from queued offline writes | Deleted data returns | Use a durable tombstone or equivalent server-authoritative revision/precondition mechanism; verify stale queued writes cannot recreate a deleted document |
 | Blaze plan requires a card | Unexpected billing | **Phases 0-2 need only the free Spark plan.** Blaze is required from phase 3 solely because Cloud Functions cannot deploy on Spark. Set a $5 budget alert when upgrading. |
-| Duplicated validation (client + rules) | Rules drift from client | Both listed in the same phase-1 task; §5 records the coupling |
+| Duplicated validation (client + rules) | Rules drift from client | Client validation remains UX; rules remain authoritative for security and integrity; review both together when invariants change |
 | Firestore 1 MiB document cap | Large challenges fail to write | One document per match removes the risk entirely |
 
 ## 12. Out of scope (future specs)
