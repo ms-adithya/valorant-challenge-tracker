@@ -209,17 +209,15 @@
       <div class="update-body">
         <h4>Added</h4>
         <ul>
-          <li>Completed challenges now download a formatted PDF report directly, replacing the printable window that pop-up blockers could stop and that produced a different document in every browser.</li>
-          <li>Report text stays selectable and searchable, long match histories paginate properly, and every page carries a footer with the challenge name and generation timestamp.</li>
-          <li>A restore panel now appears on the create-challenge screen whenever no challenge is open, so archived challenges and backup files can be recovered without first having an active challenge.</li>
-          <li><strong>Alt</strong> + arrow keys move between fields in the match entry form, following the visual grid rather than DOM order. Plain arrow keys are unchanged and still step number inputs and move the caret.</li>
+          <li>Completed challenges can now download a formatted PDF report with summary statistics and match history.</li>
+          <li>Reports paginate long histories and include searchable text plus challenge and generation details.</li>
+          <li>Archived challenges and backup files can be restored directly from the create-challenge screen.</li>
+          <li><strong>Alt</strong> + arrow keys move through match-entry fields in visual form order.</li>
         </ul>
         <h4>Fixed &amp; improved</h4>
         <ul>
-          <li><strong>Enter</strong> now selects the highlighted option in the map, result and rank comboboxes instead of moving the highlight one row further, so a keyboard user can finally commit their choice.</li>
-          <li><strong>Home</strong> and <strong>End</strong> jump to the first and last option in the combobox dropdowns, which arrow keys alone left unreachable in long lists.</li>
-          <li><strong>Escape</strong> now closes only the open dropdown instead of also dismissing the match entry modal behind it.</li>
-          <li>Importing a backup now states plainly that it replaces every challenge, match and archived challenge stored in this browser, and both import controls share one confirmation.</li>
+          <li>Keyboard users can commit highlighted combobox options with <strong>Enter</strong>, reach the first or last option with <strong>Home</strong>/<strong>End</strong>, and close only the active dropdown with <strong>Escape</strong>.</li>
+          <li>Backup imports now clearly confirm that all challenges, matches, and archived challenges in this browser will be replaced.</li>
           <li>Collapsed Advanced options no longer occupy layout while hidden.</li>
         </ul>
       </div>
@@ -228,24 +226,12 @@
     <details class="update-card major">
       <summary><span><strong>v10.1 — Stability &amp; interface polish</strong><small>Patch · Match history, charts &amp; reliability</small></span><span class="update-toggle">⌄</span></summary>
       <div class="update-body"><h4>Fixed &amp; improved</h4><ul>
-        <li>Fixed Match History rendering and Sort &amp; Filter reliability, including safe option generation and clearer active-filter feedback.</li>
-        <li>Trend and RR charts now retain actual Match History IDs, preserve numeric gaps and expose the real match number in point tooltips.</li>
-        <li>Recent matches and current-rank derivation now follow actual match numbers rather than insertion order.</li>
-        <li>Missing optional metrics display as unavailable instead of fabricated zero averages, and local-save failures now surface an actionable notice.</li>
-        <li>Improved table scrolling, sticky headers, keyboard focus and responsive toolbar/filter behaviour.</li>
+        <li>Match History rendering, sorting, filtering, scrolling, and keyboard focus are more reliable across desktop and mobile layouts.</li>
+        <li>Trend and RR charts now follow real Match History numbers, including gaps and accurate point tooltips.</li>
+        <li>Recent matches and current-rank displays now follow Match History order consistently.</li>
+        <li>Missing optional metrics remain unavailable instead of appearing as fabricated zeroes, and local-save failures show an actionable notice.</li>
       </ul>
-        <h4>Sub patch · Rank &amp; RR progression reliability</h4>
-        <ul>
-<li>Introduced a centralized challenge rank/RR progression engine.</li>
-<li>Added normalized runtime rank states distinguishing <strong>Recorded</strong>, <strong>Safely Derived</strong> and <strong>Unavailable</strong> values.</li>
-<li>Missing RR remains unavailable instead of being interpreted as <code>0</code>.</li>
-<li>RR progression is derived only when mathematically safe from authoritative recorded data.</li>
-<li>Missing RR or rank information safely stops derivation instead of producing guessed progression.</li>
-<li>Placement (Unranked → Ranked) remains independent of promotion and demotion events.</li>
-<li>Recorded values always take precedence over derived values.</li>
-<li>Rank progression automatically rebuilds after add, edit, delete, import, restore and renumber operations.</li>
-<li>Derived progression is runtime-only and never persisted as authoritative user-entered data.</li>
-</ul></div>
+      </div>
     </details>
 
     <details class="update-card major">
@@ -253,9 +239,9 @@
       <div class="update-body">
         <h4>Added & improved</h4>
         <ul>
-          <li>Completed challenges now expose a challenge-scoped report export without automatically downloading anything.</li>
-          <li>Completion reports include overall summary, detailed analytics and optional full match history, with CSV and JSON data exports plus a printable report that can be saved as PDF.</li>
-          <li>Reports remain tied to the completed challenge even after another challenge is opened or created.</li>
+          <li>Completed challenges now have a challenge-scoped reporting workflow.</li>
+          <li>Reports include summary analytics, optional full match history, and CSV/JSON exports.</li>
+          <li>Completed reports remain tied to the challenge that produced them.</li>
           <li>Unavailable optional statistics render as — instead of fabricated zero values.</li>
         </ul>
       </div>
@@ -266,11 +252,9 @@
       <div class="update-body">
         <h4>Improved</h4>
         <ul>
-          <li>Added Analytics View ranges for All matches, Last 5, Last 10 and Last 20.</li>
-          <li>The selected analytics range now updates summary metrics, Shot Accuracy, Role Performance, Top Agents, Top Maps, Agent Usage, Map Rotation, and win-rate breakdowns together.</li>
-          <li>Shot Accuracy charts now use actual Match History IDs instead of artificial sequential positions.</li>
-          <li>ADR, ACS and DDΔ summary values are calculated from the active analytics range.</li>
-          <li>Agent usage ordering and analytics meters are now derived consistently from the underlying match data.</li>
+          <li>Analytics can now be viewed across All matches, Last 5, Last 10, or Last 20.</li>
+          <li>The selected range updates summary metrics, accuracy, roles, agents, maps, and win-rate views together.</li>
+          <li>Analytics ordering and meters now reflect the selected match data consistently.</li>
         </ul>
       </div>
     </details>
