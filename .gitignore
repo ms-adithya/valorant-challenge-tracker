@@ -1,6 +1,18 @@
 # Claude Code local workspace. Holds launch config and, under worktrees/,
 # full git worktree checkouts of this repo - never commit these.
 .claude/
+.agents/
 
 # macOS
 .DS_Store
+
+# Dependencies and build artifacts
+node_modules/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.env
+.env.*
+functions/node_modules/
+functions/.env
