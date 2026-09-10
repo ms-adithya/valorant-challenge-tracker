@@ -3,20 +3,37 @@
 This document is for maintainers and contributors. It records implementation boundaries and local development conventions that do not belong in the player-facing README or in the in-app changelog.
 
 ## Architecture
-
-The tracker is a static application with classic JavaScript files. Scripts share the global scope and are loaded synchronously in the order listed near the end of `index.html`. Script order is load-bearing because later files use functions and state created by earlier files.
-
-The app stores challenges and matches in browser local storage. There is no required backend, account system, build step, or package manager.
-
-## Source layout
-
-- `js/constants.js` and `js/dom-utils.js` provide shared values and helpers.
-- `js/storage.js`, `js/persistence.js`, and `js/challenge-state.js` own storage and active-challenge state.
-- `js/match-*.js` files own match entry, validation, saving, importing, filtering, and rendering.
-- `js/analytics-*.js`, `js/chart.js`, and `js/overview-panels.js` own analytical views.
-- `js/navigation.js` owns page routing and sidebar state.
-- `js/challenge-report.js` and `js/export.js` own report and data exports.
-- `css/` contains ordered stylesheet partials. See `css/README.md` before changing load order.
+ 
+ The tracker is a static application with classic JavaScript files. Scripts share the global scope and are loaded synchronously in the order listed near the end of `index.html`. Script order is load-bearing because later files use functions and state created by earlier files.
+ 
+ The app stores challenges and matches in browser local storage. There is no required backend, account system, build step, or package manager for the client runtime.
+ 
+- Developer tooling (`package.json`) provides local emulation and test execution (`firebase-tools`, `@firebase/rules-unit-testing`) without requiring a bundler or compiler.
+- Hosting is configured via `firebase.json` for Firebase Hosting and local emulators.
+- Future phases incrementally introduce Cloud Firestore as an offline-first persistence layer behind `persist()`, with Firebase Auth and account linking.
+- Cloud architecture and phase breakdown are specified in `docs/superpowers/specs/2026-09-06-cloud-backend-and-accounts-design.md` and `docs/superpowers/plans/2026-09-06-cloud-backend-phases-0-3.md`.
+ 
+ ## Development & Testing
+ 
+ Developer commands available via `package.json`:
+ 
+ - `npm run emulators` - Starts local Firebase emulators (Auth, Firestore, Hosting, Functions).
+ - `npm run deploy` - Deploys static files to Firebase Hosting.
+ - `npm run deploy:rules` - Deploys updated Firestore security rules.
+ - `npm test` - Runs pure-function Node test suite (`node --test tests/`).
+ - `npm run test:rules` - Runs Firestore rules test suite via the Firestore emulator.
+ 
+ ## Source layout
+ 
+ - `js/constants.js` and `js/dom-utils.js` provide shared values and helpers.
+ - `js/storage.js`, `js/persistence.js`, and `js/challenge-state.js` own storage and active-challenge state.
+ - `js/match-*.js` files own match entry, validation, saving, importing, filtering, and rendering.
+ - `js/analytics-*.js`, `js/chart.js`, and `js/overview-panels.js` own analytical views.
+ - `js/navigation.js` owns page routing and sidebar state.
+ - `js/challenge-report.js` and `js/export.js` own report and data exports.
+ - `css/` contains ordered stylesheet partials. See `css/README.md` before changing load order.
+ - `firebase.json`, `firestore.rules`, `firestore.indexes.json` manage Firebase Hosting and Firestore configurations.
+ - `docs/superpowers/` contains architectural specs, phase implementation plans, and spikes.
 
 ## Data boundaries
 
