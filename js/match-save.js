@@ -45,15 +45,10 @@ if($("matchForm"))$("matchForm").onsubmit=e=>{
    if(rankErr)errors.push(rankErr);
   }
   const my=number("myScore"),enemy=number("enemyScore"),result=value("result"),rounds=number("rounds");
-  if(!Number.isFinite(my)||!Number.isFinite(enemy))errors.push("Both score values are required numbers.");
-  else{
-   if(my===0&&enemy===0)errors.push("A completed match cannot have a 0–0 score.");
-   if(result==="Win"&&my<=enemy)errors.push("For a Win, your score must be higher than the enemy score.");
-   if(result==="Loss"&&my>=enemy)errors.push("For a Loss, your score must be lower than the enemy score.");
-   if(result==="Draw"&&my!==enemy)errors.push("For a Draw, both scores must be equal.");
-   const expectedRounds=my+enemy;
-   if(!Number.isFinite(rounds)||rounds!==expectedRounds)errors.push(`Rounds played must match the score: ${my}–${enemy} equals ${expectedRounds} rounds.`);
-  }
+  const scoreErrors=typeof validateScoreArithmetic==="function"
+   ?validateScoreArithmetic(my,enemy,result,rounds)
+   :(!Number.isFinite(my)||!Number.isFinite(enemy)?["Both score values are required numbers."]:(my===0&&enemy===0?["A completed match cannot have a 0–0 score."]:[]));
+  errors.push(...scoreErrors);
   [["HS %","hs"],["KAST %","kast"]].forEach(([label,id])=>{const v=nullable(id);if(v!==null&&(v<0||v>100))errors.push(`${label} must be between 0 and 100.`)});
   [["Kills","kills"],["Deaths","deaths"],["Assists","assists"],["ACS","acs"],["ADR","adr"],["First kills","firstKills"],["First deaths","firstDeaths"],["Multi kills","multiKills"]].forEach(([label,id])=>{const v=nullable(id);if(v!==null&&v<0)errors.push(`${label} cannot be negative.`)});
   let rrAfter=nullable("rrAfter"),rrChange=nullable("rrChange");
@@ -63,13 +58,17 @@ if($("matchForm"))$("matchForm").onsubmit=e=>{
   if(rrChange!==null&&value("rankStatus")==="Demoted"&&rrChange>=0)errors.push("Demoted requires a negative RR change when RR change is entered.");
   if(errors.length){showValidationErrors(errors);return;}
 
+  const existing=edit?(data.matches.find(x=>Number(x.no)===edit)||null):null;
   const m={
-   no:requestedNo,date:edit?(data.matches.find(x=>Number(x.no)===edit)?.date||new Date().toISOString()):new Date().toISOString(),
+   matchId:existing?.matchId||undefined,
+   no:requestedNo,date:existing?.date||new Date().toISOString(),
    agent:value("agent"),map:value("map"),result,rankAfter:value("rankAfter"),rankStatus:value("rankStatus"),
    rrAfter,rrChange,myScore:my,enemyScore:enemy,
    kills:nullable("kills"),deaths:nullable("deaths"),assists:nullable("assists"),ddDelta:nullable("ddDelta"),hs:nullable("hs"),acs:nullable("acs"),adr:nullable("adr"),kast:nullable("kast"),
-   firstKills:nullable("firstKills"),firstDeaths:nullable("firstDeaths"),multiKills:nullable("multiKills"),rounds,notes:value("notes")
+   firstKills:nullable("firstKills"),firstDeaths:nullable("firstDeaths"),multiKills:nullable("multiKills"),rounds,notes:value("notes"),
+   source:existing?.source||"manual",riotMatchId:existing?.riotMatchId||null
   };
+  if(!m.matchId)delete m.matchId;
   const beforeMatches=data.matches.slice();
   if(edit){const idx=data.matches.findIndex(x=>Number(x.no)===edit);if(idx<0){showValidationErrors(["That match could not be found."]);return}data.matches[idx]=m}else data.matches.push(m);
   data.matches.sort((a,b)=>Number(a.no)-Number(b.no));
@@ -78,6 +77,7 @@ if($("matchForm"))$("matchForm").onsubmit=e=>{
   closeModal();showToast(edit?"Match changes saved.":`Match #${requestedNo} saved.`);
  }catch(err){
   console.error("Match save failed:",err);
-  showValidationErrors([err?.message||"An unexpected error stopped the match from saving. Please try again."]);
+  const isSafeMessage=err&&(err.message==="Browser storage rejected the save."||err.message==="That match could not be found.");
+  showValidationErrors([isSafeMessage?err.message:"An unexpected error stopped the match from saving. Please try again."]);
  }finally{finish()}
 };

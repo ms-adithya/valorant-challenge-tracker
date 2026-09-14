@@ -1,10 +1,12 @@
 // Match import: match-number assignment, revalidation and the review preview.
 function nextUnusedMatchNo(used){let n=1;while(used.has(n))n++;return n}
 function assignImportNumbers(objects){
- const used=new Set(data.matches.map(m=>Number(m.no)).filter(n=>Number.isInteger(n)&&n>0));
+ const currentMatches=(typeof data!=="undefined"&&data&&Array.isArray(data.matches)?data.matches:[]).filter(m=>m&&typeof m==="object");
+ const used=new Set(currentMatches.map(m=>Number(m.no)).filter(n=>Number.isInteger(n)&&n>0));
  return objects.map((raw,i)=>{
-  const o=normaliseImportedObject(raw);
-  const parsed=importNum(o.no);
+  const o=typeof normaliseImportedObject==="function"?normaliseImportedObject(raw):raw;
+  const parseNum=typeof importNum==="function"?importNum:(v=>v===null||v===undefined||String(v).trim()===""?null:Number(v));
+  const parsed=parseNum(o.no);
   const requested=Number.isInteger(parsed)&&parsed>0?parsed:null;
   let assigned=requested;
   let reason="";
@@ -19,12 +21,14 @@ function assignImportNumbers(objects){
 function rebuildPendingImport(){
  const assignments=assignImportNumbers(pendingImportSource);
  const sorted=[...assignments].sort((a,b)=>a.assigned-b.assigned);
- let previous={rankAfter:data.startRank,rrAfter:data.startRR};
- const existing=[...data.matches].sort((a,b)=>a.no-b.no);
+ const currentData=typeof data!=="undefined"?data:null;
+ const currentMatches=(currentData&&Array.isArray(currentData.matches)?currentData.matches:[]).filter(m=>m&&typeof m==="object");
+ let previous={rankAfter:currentData?.startRank||"Unranked",rrAfter:currentData?.startRR??null};
+ const existing=[...currentMatches].sort((a,b)=>Number(a.no)-Number(b.no));
  const checkedByRow=new Map();
  for(const a of sorted){
-  const priorExisting=existing.filter(m=>m.no<a.assigned).at(-1);
-  if(priorExisting && (!previous.no || priorExisting.no>(previous.no||0)))previous=priorExisting;
+  const priorExisting=existing.filter(m=>Number(m.no)<a.assigned).at(-1);
+  if(priorExisting && (!previous.no || Number(priorExisting.no)>(Number(previous.no)||0)))previous=priorExisting;
   const checked=validateImportedMatch(a.raw,previous,a.assigned);
   checked.assignment=a;
   if(!checked.errors.length)previous=checked.match;
@@ -62,14 +66,23 @@ function renderImportPreview(){
 let pendingImportSource=[];
 let importReviewFilter="all";
 function buildImportPreview(objects){pendingImportSource=objects.map(o=>normaliseImportedObject(o));importReviewFilter="all";rebuildPendingImport();openImportMatchesModal()}
-document.addEventListener("click",e=>{
- const filter=e.target.closest("[data-import-filter]");if(!filter)return;
- importReviewFilter=filter.dataset.importFilter||"all";renderImportPreview();
-});
-document.addEventListener("change",e=>{
- const input=e.target.closest("[data-import-no]");if(!input)return;
- const i=Number(input.dataset.importNo),v=Number(input.value);
- if(!Number.isInteger(v)||v<1){showAppNotice("Match number must be a positive whole number.","Invalid match number");renderImportPreview();return}
- // User edits are authoritative when free; collisions are moved to the next available slot.
- pendingImportSource[i].no=String(v);rebuildPendingImport();
-});
+if(typeof document!=="undefined"){
+ document.addEventListener("click",e=>{
+  const filter=e.target.closest("[data-import-filter]");if(!filter)return;
+  importReviewFilter=filter.dataset.importFilter||"all";renderImportPreview();
+ });
+ document.addEventListener("change",e=>{
+  const input=e.target.closest("[data-import-no]");if(!input)return;
+  const i=Number(input.dataset.importNo),v=Number(input.value);
+  if(!Number.isInteger(v)||v<1){showAppNotice("Match number must be a positive whole number.","Invalid match number");renderImportPreview();return}
+  // User edits are authoritative when free; collisions are moved to the next available slot.
+  pendingImportSource[i].no=String(v);rebuildPendingImport();
+ });
+}
+
+if(typeof module!=="undefined"&&module.exports){
+ module.exports={
+  nextUnusedMatchNo,
+  assignImportNumbers
+ };
+}
