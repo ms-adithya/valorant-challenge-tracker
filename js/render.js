@@ -10,8 +10,9 @@ function render(){
  if(window.renderSetupRestore)renderSetupRestore();
  const activePage=document.querySelector(".page.active-page");
  if(!activePage)showPage("overview");
- const ms=data.matches,c=cur(),wins=ms.filter(m=>m.result==="Win").length,losses=ms.filter(m=>m.result==="Loss").length,draws=ms.filter(m=>m.result==="Draw").length,rrChanges=ms.map(m=>optionalNumber(m.rrChange)).filter(v=>v!==null),net=rrChanges.reduce((s,v)=>s+v,0);
- $("heroName").textContent=data.name;$("heroDesc").textContent=data.description||`Target: ${(data.targetRank||"No target")}`;$("heroRank").textContent=c.rankAfter;const tier=c.rankAfter.split(" ")[0];
+  if(!Array.isArray(data.matches))data.matches=[];
+  const ms=data.matches.filter(m=>m&&typeof m==="object"&&!Array.isArray(m)),c=cur(),wins=ms.filter(m=>m.result==="Win").length,losses=ms.filter(m=>m.result==="Loss").length,draws=ms.filter(m=>m.result==="Draw").length,rrChanges=ms.map(m=>optionalNumber(m.rrChange)).filter(v=>v!==null),net=rrChanges.reduce((s,v)=>s+v,0);
+  $("heroName").textContent=data.name||"";$("heroDesc").textContent=data.description||(data.targetRank?`Target: ${data.targetRank}`:"No target");const heroRank=c.rankAfter||"Unranked";$("heroRank").textContent=heroRank;const tier=heroRank.split(" ")[0]||"Unranked";
  const emblem=$("rankEmblem");
  const rankAssetName=String(c.rankAfter||"").trim().toLowerCase().replace(/\s+/g,"-");
  const imageRanks=new Set(["unranked","bronze-1","bronze-2","bronze-3","silver-1","silver-2","silver-3","gold-1","gold-2","gold-3"]);

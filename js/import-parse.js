@@ -35,6 +35,10 @@ function normaliseImportedObject(raw){
  if(o.score && (o.myScore==null||o.enemyScore==null)){const m=String(o.score).match(/(\d+)\s*[-:]\s*(\d+)/);if(m){o.myScore=m[1];o.enemyScore=m[2]}}
  return o;
 }
+const defaultRanksList=["Unranked","Iron 1","Iron 2","Iron 3","Bronze 1","Bronze 2","Bronze 3","Silver 1","Silver 2","Silver 3","Gold 1","Gold 2","Gold 3","Platinum 1","Platinum 2","Platinum 3","Diamond 1","Diamond 2","Diamond 3","Ascendant 1","Ascendant 2","Ascendant 3","Immortal 1","Immortal 2","Immortal 3","Radiant"];
+const getRanks=()=>typeof ranks!=="undefined"?ranks:(typeof global!=="undefined"&&global.ranks?global.ranks:defaultRanksList);
+const checkIsUnranked=r=>typeof isUnranked==="function"?isUnranked(r):(r==="Unranked");
+
 function validateImportedMatch(raw,previous,index){
  const o=normaliseImportedObject(raw),errors=[];
  const result=String(o.result||"").trim().toLowerCase();
@@ -45,29 +49,35 @@ function validateImportedMatch(raw,previous,index){
  if(!String(o.map||"").trim())errors.push("Map is required.");
  if(!Number.isFinite(my)||!Number.isFinite(enemy))errors.push("Both score values are required numbers.");
  else{
+  if(!Number.isInteger(my)||!Number.isInteger(enemy))errors.push("Score values must be whole numbers.");
+  if(my<0||enemy<0)errors.push("Score values cannot be negative.");
   if(my===0&&enemy===0)errors.push("A completed match cannot be 0–0.");
   if(canonicalResult==="Win"&&my<=enemy)errors.push("Win requires your score to be higher.");
   if(canonicalResult==="Loss"&&my>=enemy)errors.push("Loss requires your score to be lower.");
   if(canonicalResult==="Draw"&&my!==enemy)errors.push("Draw requires equal scores.");
  }
+ const currentRanks=getRanks();
  const rankAfter=String(o.rankAfter||previous?.rankAfter||"").trim();
  let rankStatus=String(o.rankStatus||"").trim();
  let rankStatusAdjusted="";
- if(!ranks.includes(rankAfter))errors.push("Rank After is missing or not recognised.");
- if(previous&&ranks.includes(rankAfter)&&ranks.includes(previous.rankAfter)){
-  const beforeIndex=ranks.indexOf(previous.rankAfter),afterIndex=ranks.indexOf(rankAfter);
-  const inferred=isUnranked(previous.rankAfter)?(isUnranked(rankAfter)?"Same Rank":"Placed"):(isUnranked(rankAfter)?"Invalid":afterIndex===beforeIndex?"Same Rank":afterIndex>beforeIndex?"Promoted":"Demoted");
+ if(!currentRanks.includes(rankAfter))errors.push("Rank After is missing or not recognised.");
+ if(previous&&currentRanks.includes(rankAfter)&&currentRanks.includes(previous.rankAfter)){
+  const beforeIndex=currentRanks.indexOf(previous.rankAfter),afterIndex=currentRanks.indexOf(rankAfter);
+  const inferred=checkIsUnranked(previous.rankAfter)?(checkIsUnranked(rankAfter)?"Same Rank":"Placed"):(checkIsUnranked(rankAfter)?"Invalid":afterIndex===beforeIndex?"Same Rank":afterIndex>beforeIndex?"Promoted":"Demoted");
   if(inferred!=="Invalid" && (!rankStatus||!["Same Rank","Placed","Promoted","Demoted"].includes(rankStatus)||rankStatus!==inferred)){
    rankStatusAdjusted=rankStatus?`${rankStatus} → ${inferred}`:`Auto: ${inferred}`;
    rankStatus=inferred;
   }
  }else if(!rankStatus){rankStatus="Same Rank"}
  if(!["Same Rank","Placed","Promoted","Demoted"].includes(rankStatus))errors.push("Rank Status must be Same Rank, Placed, Promoted or Demoted.");
- if(previous&&ranks.includes(rankAfter)){
-  const re=validateRankTransition(previous.rankAfter,rankAfter,rankStatus);if(re)errors.push(re);
+ if(previous&&currentRanks.includes(rankAfter)){
+  const validateRankTransitionFn=typeof validateRankTransition==="function"?validateRankTransition:(typeof global!=="undefined"&&global.validateRankTransition?global.validateRankTransition:null);
+  if(validateRankTransitionFn){
+   const re=validateRankTransitionFn(previous.rankAfter,rankAfter,rankStatus);if(re)errors.push(re);
+  }
  }
  let rrAfter=importNum(o.rrAfter),rrChange=importNum(o.rrChange);
- if(isUnranked(rankAfter)){rrAfter=null;rrChange=null;}
+ if(checkIsUnranked(rankAfter)){rrAfter=null;rrChange=null;}
  if(Number.isNaN(rrAfter)||(rrAfter!==null&&(rrAfter<0||rrAfter>100)))errors.push("RR After must be between 0 and 100 when provided.");
  if(Number.isNaN(rrChange))errors.push("RR Change must be numeric when provided.");
  if(rankStatus==="Promoted"&&rrChange!==null&&Number.isFinite(rrChange)&&rrChange<=0)errors.push("Promoted requires positive RR change when RR Change is provided.");
@@ -90,19 +100,32 @@ function validateImportedMatch(raw,previous,index){
  };
  return {match,errors,raw:o,rankStatusAdjusted};
 }
-function openImportMatchesModal(){$("importMatchesModal").classList.remove("hidden");$("importMatchesModal").setAttribute("aria-hidden","false")}
-function closeImportMatchesModal(){$("importMatchesModal").classList.add("hidden");$("importMatchesModal").setAttribute("aria-hidden","true");pendingMatchImport=[]}
-document.querySelectorAll("[data-import-close]").forEach(x=>x.addEventListener("click",closeImportMatchesModal));
+function openImportMatchesModal(){if(typeof $==="function"&&$("importMatchesModal")){$("importMatchesModal").classList.remove("hidden");$("importMatchesModal").setAttribute("aria-hidden","false")}}
+function closeImportMatchesModal(){if(typeof $==="function"&&$("importMatchesModal")){$("importMatchesModal").classList.add("hidden");$("importMatchesModal").setAttribute("aria-hidden","true");}pendingMatchImport=[]}
 
-document.addEventListener("click",e=>{
- const modal=$("importMatchesModal");
- if(!modal||modal.classList.contains("hidden"))return;
- if(e.target.closest("[data-import-close]")){
-  e.preventDefault();
-  e.stopPropagation();
-  closeImportMatchesModal();
- }
-});
-document.addEventListener("keydown",e=>{
- if(e.key==="Escape"&&!$("importMatchesModal")?.classList.contains("hidden"))closeImportMatchesModal();
-});
+if(typeof document!=="undefined"){
+ document.querySelectorAll("[data-import-close]").forEach(x=>x.addEventListener("click",closeImportMatchesModal));
+
+ document.addEventListener("click",e=>{
+  const modal=typeof $==="function"?$("importMatchesModal"):null;
+  if(!modal||modal.classList.contains("hidden"))return;
+  if(e.target.closest("[data-import-close]")){
+   e.preventDefault();
+   e.stopPropagation();
+   closeImportMatchesModal();
+  }
+ });
+ document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&typeof $==="function"&&!$("importMatchesModal")?.classList.contains("hidden"))closeImportMatchesModal();
+ });
+}
+
+if(typeof module!=="undefined"&&module.exports){
+ module.exports={
+  parseDelimited,
+  normHeader,
+  normaliseImportedObject,
+  validateImportedMatch,
+  pendingMatchImport
+ };
+}

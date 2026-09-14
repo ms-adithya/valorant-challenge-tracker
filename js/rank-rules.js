@@ -23,18 +23,26 @@ function updateTargetRankOptions(){
  if(target.value && rankIndex(target.value)<=currentIndex)target.value="";
 }
 
+const defaultRanksList=["Unranked","Iron 1","Iron 2","Iron 3","Bronze 1","Bronze 2","Bronze 3","Silver 1","Silver 2","Silver 3","Gold 1","Gold 2","Gold 3","Platinum 1","Platinum 2","Platinum 3","Diamond 1","Diamond 2","Diamond 3","Ascendant 1","Ascendant 2","Ascendant 3","Immortal 1","Immortal 2","Immortal 3","Radiant"];
+function getRankIdx(r){return typeof rankIndex==="function"?rankIndex(r):defaultRanksList.indexOf(r)}
+function getIsUnranked(r){return typeof isUnranked==="function"?isUnranked(r):(r==="Unranked")}
+
 function validateRankTransition(prevRank,nextRank,status){
- const a=rankIndex(prevRank),b=rankIndex(nextRank);
+ const a=getRankIdx(prevRank),b=getRankIdx(nextRank);
  if(a<0||b<0)return "Select a recognised rank.";
- if(isUnranked(prevRank)){
-  if(isUnranked(nextRank) && status!=="Same Rank")return "Placement is still unresolved, so rank status must remain Same Rank.";
-  if(!isUnranked(nextRank) && status!=="Placed")return "The first ranked result after Unranked must use Placed, not promotion or demotion.";
+ if(getIsUnranked(prevRank)){
+  if(getIsUnranked(nextRank) && status!=="Same Rank")return "Placement is still unresolved, so rank status must remain Same Rank.";
+  if(!getIsUnranked(nextRank) && status!=="Placed")return "The first ranked result after Unranked must use Placed, not promotion or demotion.";
   return "";
  }
- if(isUnranked(nextRank))return "A placed player cannot return to Unranked within the same challenge.";
+ if(getIsUnranked(nextRank))return "A placed player cannot return to Unranked within the same challenge.";
  if(status==="Placed")return "Placed is only valid when the previous rank is Unranked.";
  if(status==="Same Rank" && a!==b)return "Rank status is Same Rank, but the selected rank changed.";
  if(status==="Promoted" && b<=a)return "Promoted requires the ending rank to be higher than the previous rank.";
  if(status==="Demoted" && b>=a)return "Demoted requires the ending rank to be lower than the previous rank.";
  return "";
+}
+
+if(typeof module!=="undefined"&&module.exports){
+ module.exports={validateRankTransition};
 }

@@ -5,3 +5,7 @@ const competitiveMaps=["Abyss","Ascent","Haven","Lotus","Split","Summit","Sunset
 const nonCompetitiveMaps=["Bind","Breeze","Corrode","Fracture","Icebox","Pearl"];
 const maps=[...competitiveMaps,...nonCompetitiveMaps];
 const agentRoles={"Brimstone":"Controller","Viper":"Controller","Omen":"Controller","Astra":"Controller","Harbor":"Controller","Clove":"Controller","Miks":"Controller","Sage":"Sentinel","Cypher":"Sentinel","Killjoy":"Sentinel","Chamber":"Sentinel","Deadlock":"Sentinel","Vyse":"Sentinel","Sova":"Initiator","Breach":"Initiator","Skye":"Initiator","KAY/O":"Initiator","Fade":"Initiator","Gekko":"Initiator","Tejo":"Initiator","Phoenix":"Duelist","Jett":"Duelist","Reyna":"Duelist","Raze":"Duelist","Yoru":"Duelist","Neon":"Duelist","Iso":"Duelist","Waylay":"Duelist"};
+
+if(typeof module!=="undefined"&&module.exports){
+ module.exports={ranks,agents,competitiveMaps,nonCompetitiveMaps,maps,agentRoles};
+}

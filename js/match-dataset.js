@@ -5,7 +5,10 @@ let matchPage=1;
 // - countedMatches(): canonical challenge dataset; analytics/overview/charts read from here.
 // - getTableMatches(): table-only filtering/sorting; never an analytics source.
 // - getTablePage(): presentation-only pagination; must never feed charts or statistics.
-function countedMatches(){ return data && Array.isArray(data.matches) ? data.matches : []; }
+function countedMatches(){
+ const d = typeof data !== "undefined" ? data : (typeof global !== "undefined" ? global.data : null);
+ return d && Array.isArray(d.matches) ? d.matches.filter(m=>m&&typeof m==="object"&&!Array.isArray(m)) : [];
+}
 function usedMatchNumbers(excludeNo=null){
  const excluded=excludeNo===null||excludeNo===undefined?null:Number(excludeNo);
  return new Set(countedMatches()
@@ -67,4 +70,17 @@ function getPaginationPages(page,pages){
  if(rightBound<pages-1)output.push("right");
  output.push(pages);
  return output;
+}
+
+if(typeof module!=="undefined"&&module.exports){
+ module.exports={
+  countedMatches,
+  usedMatchNumbers,
+  matchNumberExists,
+  analyticsMatches,
+  nextCountedMatchNumber,
+  getTableMatches,
+  getTablePage,
+  getPaginationPages
+ };
 }

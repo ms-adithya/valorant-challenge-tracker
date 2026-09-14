@@ -16,7 +16,7 @@ if($("challengeForm"))$("challengeForm").addEventListener("submit",e=>{
  const targetRank=$("targetRank").value;
  const rrRaw=$("startRR").value;
  if(!name){showAppNotice("Enter a challenge name.","Challenge details");return;}
- if(!target || target<1){showAppNotice("Enter the number of matches to track.","Challenge details");return;}
+ if(!target || target<1 || !Number.isInteger(target)){showAppNotice("Enter the number of matches to track as a whole number.","Challenge details");return;}
  if(!startRank){showAppNotice("Select your current / starting rank.","Challenge details");return;}
  
  let rr=null;
@@ -30,18 +30,18 @@ if($("challengeForm"))$("challengeForm").addEventListener("submit",e=>{
  const previous=data;
  activeChallenges.push(nextChallenge);
  data=nextChallenge;
- try{
-   persist();
- }catch(err){
-   activeChallenges=activeChallenges.filter(c=>c.id!==nextChallenge.id);
-   data=previous;
-   console.error("Storage write failed:",err);
-   const reason=err && err.name==="QuotaExceededError"
-     ?"Browser storage is full. Export/delete older local data and try again."
-     :"Browser storage is unavailable. Make sure this page is not running in a restricted/private file context.";
-   showAppNotice(`Could not save the challenge. ${reason}`,"Challenge not saved");
-   return;
- }
+  try{
+    if(!persist())throw new Error("Browser storage rejected the save.");
+  }catch(err){
+    activeChallenges=activeChallenges.filter(c=>c.id!==nextChallenge.id);
+    data=previous;
+    console.error("Storage write failed:",err);
+    const reason=err && err.name==="QuotaExceededError"
+      ?"Browser storage is full. Export/delete older local data and try again."
+      :"Browser storage is unavailable. Make sure this page is not running in a restricted/private file context.";
+    showAppNotice(`Could not save the challenge. ${reason}`,"Challenge not saved");
+    return;
+  }
  render();
  showPage("overview");
  showToast("Challenge created.");

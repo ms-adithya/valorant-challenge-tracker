@@ -189,3 +189,206 @@ test("owner can update updatedAt on existing valid challenge, but cannot create 
   );
 });
 
+test("boundary values: exact boundaries 0 and 100 are accepted, beyond is rejected", async () => {
+  const db = asAlice();
+  await assertSucceeds(db.doc("users/alice/challenges/c1").set(validChallenge));
+
+  // 0 and 100 percentage values are allowed
+  await assertSucceeds(
+    db.doc("users/alice/challenges/c1/matches/m_b0").set({
+      ...validMatch,
+      hs: 0,
+      kast: 0,
+      rrAfter: 0,
+    })
+  );
+  await assertSucceeds(
+    db.doc("users/alice/challenges/c1/matches/m_b100").set({
+      ...validMatch,
+      no: 2,
+      hs: 100,
+      kast: 100,
+      rrAfter: 100,
+    })
+  );
+
+  // Negative boundaries or > 100 rejected
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_b_neg").set({ ...validMatch, hs: -1 })
+  );
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_b_over").set({ ...validMatch, kast: 101 })
+  );
+
+  // Challenge startRR boundary tests
+  await assertSucceeds(
+    db.doc("users/alice/challenges/c_rr0").set({ ...validChallenge, startRR: 0 })
+  );
+  await assertSucceeds(
+    db.doc("users/alice/challenges/c_rr100").set({ ...validChallenge, startRR: 100 })
+  );
+  await assertFails(
+    db.doc("users/alice/challenges/c_rr_neg").set({ ...validChallenge, startRR: -1 })
+  );
+  await assertFails(
+    db.doc("users/alice/challenges/c_rr_over").set({ ...validChallenge, startRR: 101 })
+  );
+
+  // Target matches boundary tests: target >= 1
+  await assertSucceeds(
+    db.doc("users/alice/challenges/c_t1").set({ ...validChallenge, target: 1 })
+  );
+  await assertFails(
+    db.doc("users/alice/challenges/c_t0").set({ ...validChallenge, target: 0 })
+  );
+
+  // Match number boundary: no >= 1
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_no0").set({ ...validMatch, no: 0 })
+  );
+});
+
+test("challenge name boundary: empty string rejected, <= 200 accepted, > 200 rejected", async () => {
+  const db = asAlice();
+  await assertFails(
+    db.doc("users/alice/challenges/c_empty").set({ ...validChallenge, name: "" })
+  );
+  const name200 = "a".repeat(200);
+  await assertSucceeds(
+    db.doc("users/alice/challenges/c_200").set({ ...validChallenge, name: name200 })
+  );
+  const name201 = "a".repeat(201);
+  await assertFails(
+    db.doc("users/alice/challenges/c_201").set({ ...validChallenge, name: name201 })
+  );
+});
+
+test("malformed rounds: rounds arithmetic and negative scores are rejected", async () => {
+  const db = asAlice();
+  await assertSucceeds(db.doc("users/alice/challenges/c1").set(validChallenge));
+
+  // Rounds mismatch
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_bad_sum").set({
+      ...validMatch,
+      myScore: 13,
+      enemyScore: 7,
+      rounds: 21,
+    })
+  );
+
+  // Negative scores
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_neg_score").set({
+      ...validMatch,
+      myScore: -1,
+      enemyScore: 13,
+      rounds: 12,
+    })
+  );
+
+  // Non-integer rounds
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_float_rounds").set({
+      ...validMatch,
+      myScore: 13,
+      enemyScore: 7,
+      rounds: 20.5,
+    })
+  );
+});
+
+test("unauthorized collections: arbitrary root collections are blocked", async () => {
+  const alice = asAlice();
+  const anon = asAnon();
+
+  await assertFails(alice.doc("admin/config").get());
+  await assertFails(alice.doc("admin/config").set({ key: "val" }));
+  await assertFails(alice.doc("system/metrics").get());
+  await assertFails(alice.doc("system/metrics").set({ cpu: 99 }));
+  await assertFails(anon.doc("admin/config").get());
+
+  // Alice cannot access Bob's challenges or matches
+  await assertFails(alice.doc("users/bob/challenges/c1").get());
+  await assertFails(alice.doc("users/bob/challenges/c1").set(validChallenge));
+  await assertFails(alice.doc("users/bob/challenges/c1/matches/m1").get());
+  await assertFails(alice.doc("users/bob/challenges/c1/matches/m1").set(validMatch));
+});
+
+test("tamper attempts: unauthorized source, negative stats, and riot key injection are blocked", async () => {
+  const db = asAlice();
+  await assertSucceeds(db.doc("users/alice/challenges/c1").set(validChallenge));
+
+  // Tamper match source (only 'manual', 'import', 'riot' permitted)
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_bad_src").set({
+      ...validMatch,
+      source: "cheat_engine",
+    })
+  );
+
+  // Negative stat counters
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_neg_deaths").set({
+      ...validMatch,
+      deaths: -1,
+    })
+  );
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_neg_acs").set({
+      ...validMatch,
+      acs: -10,
+    })
+  );
+
+  // Tamper user profile with riot key during update
+  await assertSucceeds(db.doc("users/alice").set({ displayName: "Alice" }));
+  await assertFails(db.doc("users/alice").update({ riot: { puuid: "stolen-puuid" } }));
+});
+
+test("boundary validation: float score values and float challenge targets are rejected", async () => {
+  const db = asAlice();
+  await assertSucceeds(db.doc("users/alice/challenges/c1").set(validChallenge));
+
+  // Float target match count rejected
+  await assertFails(
+    db.doc("users/alice/challenges/c_float_target").set({ ...validChallenge, target: 10.5 })
+  );
+
+  // Float myScore rejected
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_float_myscore").set({
+      ...validMatch,
+      myScore: 12.5,
+      enemyScore: 7.5,
+      rounds: 20,
+    })
+  );
+
+  // Float enemyScore rejected
+  await assertFails(
+    db.doc("users/alice/challenges/c1/matches/m_float_enemyscore").set({
+      ...validMatch,
+      myScore: 13,
+      enemyScore: 7.5,
+      rounds: 20,
+    })
+  );
+});
+
+test("unauthorized operations: foreign user cannot delete challenge, matches, or meta docs", async () => {
+  const alice = asAlice();
+  const bob = asBob();
+  await assertSucceeds(alice.doc("users/alice/challenges/c1").set(validChallenge));
+  await assertSucceeds(alice.doc("users/alice/challenges/c1/matches/m1").set(validMatch));
+  await assertSucceeds(alice.doc("users/alice/meta/tombstones").set({ c1: "2026-09-15T00:00:00Z" }));
+
+  // Bob cannot delete Alice's challenge
+  await assertFails(bob.doc("users/alice/challenges/c1").delete());
+  // Bob cannot delete Alice's match
+  await assertFails(bob.doc("users/alice/challenges/c1/matches/m1").delete());
+  // Bob cannot delete Alice's meta documents
+  await assertFails(bob.doc("users/alice/meta/tombstones").delete());
+});
+
+
