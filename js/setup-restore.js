@@ -14,9 +14,9 @@ function renderSetupRestore(){
  if(!stranded)return;
  const block=$("setupArchiveBlock"),list=$("setupArchiveList");
  if(block)block.classList.toggle("hidden",archives.length===0);
- if(list)list.innerHTML=archives.map((c,i)=>{
+ if(list)list.innerHTML=archives.map(c=>{
   const progress=escapeHtml(challengeProgressText(c,{history:true}));
-  return `<div class="archive-restore-row"><div><h3>${escapeHtml(c.name)}</h3><p>${progress} · ${escapeHtml(c.startRank??"")} → target ${escapeHtml(c.targetRank||"No target")}</p></div><div class="actions"><button class="ghost" type="button" data-restore-archive="${i}">Unarchive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteArchivedChallenge(${i})">Delete</button></div></div>`;
+  return `<div class="archive-restore-row"><div><h3>${escapeHtml(c.name)}</h3><p>${progress} · ${escapeHtml(c.startRank??"")} → target ${escapeHtml(c.targetRank||"No target")}</p></div><div class="actions"><button class="ghost" type="button" data-restore-archive="${escapeHtml(c.id)}">Unarchive</button><button class="ghost delete-archive-btn" type="button" onclick="deleteArchivedChallenge('${escapeJsSingleQuoted(c.id)}')">Delete</button></div></div>`;
  }).join("");
 }
 wireRestoreInput("setupRestoreInput");
