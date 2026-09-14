@@ -25,10 +25,12 @@ window.deleteActiveChallenge=async ()=>{
  await deleteActiveById(id);
  closeChallengeOptions();
 };
-window.deleteArchivedChallenge=async (archiveIndex)=>{
+window.deleteArchivedChallenge=async (id)=>{
+ const archiveIndex=archives.findIndex(c=>c.id===id);if(archiveIndex<0)return;
  const challenge=archives[archiveIndex];if(!challenge)return;
  if(!await appConfirm({title:`Delete "${challenge.name}"?`,message:"This permanently removes this archived challenge and all of its match data. This cannot be undone.",confirmText:"Delete permanently",kicker:"DELETE ARCHIVE"}))return;
- archives.splice(archiveIndex,1);
+ const currentIndex=archives.findIndex(c=>c.id===id);if(currentIndex<0)return;
+ archives.splice(currentIndex,1);
  try{persist()}catch(err){console.error(err);showAppNotice("Could not update browser storage after deleting the archived challenge.","Storage error");}
  renderArchive();
  renderArchiveBrowser();
@@ -36,9 +38,10 @@ window.deleteArchivedChallenge=async (archiveIndex)=>{
  if(archives.length===0)closeArchiveBrowser();
 };
 window.archiveCurrent=async ()=>{if(!data)return;await archiveActiveChallenge(data.id);};
-window.unarchiveChallenge=async (archiveIndex)=>{
- const restored=archives[archiveIndex];if(!restored)return;
- archives.splice(archiveIndex,1);
+window.unarchiveChallenge=async (id)=>{
+ const idx=archives.findIndex(c=>c.id===id);if(idx<0)return;
+ const restored=archives[idx];if(!restored)return;
+ archives.splice(idx,1);
  const {archivedAt,...activeChallenge}=restored;
  ensureChallengeId(activeChallenge);
  activeChallenges.push(activeChallenge);
