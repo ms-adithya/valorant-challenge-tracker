@@ -37,12 +37,12 @@ try {
   } = fx;
 
   const firebaseConfig = {
-    apiKey: "REPLACE_WITH_VALUE_FROM_STEP_2",
-    authDomain: "REPLACE_WITH_VALUE_FROM_STEP_2",
-    projectId: "REPLACE_WITH_VALUE_FROM_STEP_2",
-    storageBucket: "REPLACE_WITH_VALUE_FROM_STEP_2",
-    messagingSenderId: "REPLACE_WITH_VALUE_FROM_STEP_2",
-    appId: "REPLACE_WITH_VALUE_FROM_STEP_2",
+    apiKey: "AIzaSyDNJ8C9ThiMLnEyKoF6WTTHmpe-aeWU-74",
+    authDomain: "valorant-challenge-tracker.firebaseapp.com",
+    projectId: "valorant-challenge-tracker",
+    storageBucket: "valorant-challenge-tracker.firebasestorage.app",
+    messagingSenderId: "258118916399",
+    appId: "1:258118916399:web:0424f20a1900f60049a9da",
   };
 
   const app = initializeApp(firebaseConfig);
