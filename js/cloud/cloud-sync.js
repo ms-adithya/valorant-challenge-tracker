@@ -8,45 +8,50 @@
   let tombstones = {};
 
   function userRoot(uid) {
-    const { fx, db } = window.VCT || {};
-    const targetUid = uid || (window.VCT && window.VCT.uid);
+    const vct = typeof window !== "undefined" ? window.VCT : null;
+    const { fx, db } = vct || {};
+    const targetUid = uid || (vct && vct.uid);
     if (!fx || !db || !targetUid) return null;
     return fx.doc(db, "users", targetUid);
   }
 
   function reconcileMatchNumbers(challenge) {
     if (!challenge || !Array.isArray(challenge.matches) || challenge.matches.length < 2) return false;
+    challenge.matches.sort((a, b) => Number(a.no) - Number(b.no) || String(a.matchId || "").localeCompare(String(b.matchId || "")));
     const used = new Set();
-    let renumbered = false;
-    const reassignments = [];
+    const duplicates = [];
     for (const m of challenge.matches) {
       const currentNo = Number(m.no);
-      if (!Number.isInteger(currentNo) || currentNo <= 0 || used.has(currentNo)) {
-        let nextNo = 1;
-        while (used.has(nextNo)) nextNo++;
-        const oldNo = m.no;
-        m.no = nextNo;
-        used.add(nextNo);
-        renumbered = true;
-        reassignments.push({ oldNo, nextNo });
-      } else {
+      if (Number.isInteger(currentNo) && currentNo > 0 && !used.has(currentNo)) {
         used.add(currentNo);
+      } else {
+        duplicates.push(m);
       }
     }
-    if (renumbered) {
-      challenge.matches.sort((a, b) => Number(a.no) - Number(b.no) || String(a.matchId || "").localeCompare(String(b.matchId || "")));
-      if (typeof window !== "undefined" && typeof window.showAppNotice === "function" && reassignments.length > 0) {
-        const msg = reassignments.length === 1
-          ? `Match #${reassignments[0].oldNo} was reassigned to #${reassignments[0].nextNo} because #${reassignments[0].oldNo} already exists.`
-          : `${reassignments.length} matches were reassigned numbers because duplicate match numbers were detected.`;
-        window.showAppNotice(msg, "Match numbers reconciled");
-      }
+    if (duplicates.length === 0) return false;
+
+    let nextNo = 1;
+    const reassignments = [];
+    for (const m of duplicates) {
+      while (used.has(nextNo)) nextNo++;
+      const oldNo = m.no;
+      m.no = nextNo;
+      used.add(nextNo);
+      reassignments.push({ oldNo, nextNo });
     }
-    return renumbered;
+
+    challenge.matches.sort((a, b) => Number(a.no) - Number(b.no) || String(a.matchId || "").localeCompare(String(b.matchId || "")));
+    if (typeof window !== "undefined" && typeof window.showAppNotice === "function" && reassignments.length > 0) {
+      const msg = reassignments.length === 1
+        ? `Match #${reassignments[0].oldNo} was reassigned to #${reassignments[0].nextNo} because #${reassignments[0].oldNo} already exists.`
+        : `${reassignments.length} matches were reassigned numbers because duplicate match numbers were detected.`;
+      window.showAppNotice(msg, "Match numbers reconciled");
+    }
+    return true;
   }
 
   async function pushChanges() {
-    const VCT = window.VCT;
+    const VCT = typeof window !== "undefined" ? window.VCT : null;
     if (!VCT || !VCT.uid || !VCT.fx) return;
     // Never write before the first snapshot lands, or an empty local state
     // would diff into a full delete of everything on the server.
@@ -54,17 +59,17 @@
     if (pushing) { pushQueued = true; return; }
     pushing = true;
     try {
-      const buildSnap = window.buildSnapshot || (window.VCTSnapshotModel && window.VCTSnapshotModel.buildSnapshot);
-      const diffSnap = window.diffSnapshots || (window.VCTSnapshotDiff && window.VCTSnapshotDiff.diffSnapshots);
-      const chunkFn = window.chunk || (window.VCTSnapshotDiff && window.VCTSnapshotDiff.chunk) || ((arr, sz) => {
+      const buildSnap = (typeof window !== "undefined" && window.buildSnapshot) || (typeof window !== "undefined" && window.VCTSnapshotModel && window.VCTSnapshotModel.buildSnapshot);
+      const diffSnap = (typeof window !== "undefined" && window.diffSnapshots) || (typeof window !== "undefined" && window.VCTSnapshotDiff && window.VCTSnapshotDiff.diffSnapshots);
+      const chunkFn = (typeof window !== "undefined" && window.chunk) || (typeof window !== "undefined" && window.VCTSnapshotDiff && window.VCTSnapshotDiff.chunk) || ((arr, sz) => {
         const out = [];
         for (let i = 0; i < arr.length; i += sz) out.push(arr.slice(i, i + sz));
         return out;
       });
 
-      const currentData = typeof data !== "undefined" ? data : window.data;
-      const currentActive = typeof activeChallenges !== "undefined" ? activeChallenges : window.activeChallenges;
-      const currentArchives = typeof archives !== "undefined" ? archives : window.archives;
+      const currentData = typeof data !== "undefined" ? data : (typeof window !== "undefined" ? window.data : undefined);
+      const currentActive = typeof activeChallenges !== "undefined" ? activeChallenges : (typeof window !== "undefined" ? window.activeChallenges : []);
+      const currentArchives = typeof archives !== "undefined" ? archives : (typeof window !== "undefined" ? window.archives : []);
 
       const next = buildSnap({
         data: currentData,
@@ -159,7 +164,7 @@
   }
 
   async function start(uid) {
-    const VCT = window.VCT;
+    const VCT = typeof window !== "undefined" ? window.VCT : null;
     if (!VCT || !VCT.fx || !VCT.db) return;
     const { fx, db } = VCT;
     const rootDoc = userRoot(uid);
@@ -200,8 +205,8 @@
     // migration (Task 7) push it up. Do NOT blank the app.
     if (!entries.length && !hydrated) { hydrated = true; return; }
 
-    const applyDocs = window.applyDocuments || (window.VCTSnapshotModel && window.VCTSnapshotModel.applyDocuments);
-    const buildSnap = window.buildSnapshot || (window.VCTSnapshotModel && window.VCTSnapshotModel.buildSnapshot);
+    const applyDocs = (typeof window !== "undefined" && window.applyDocuments) || (typeof window !== "undefined" && window.VCTSnapshotModel && window.VCTSnapshotModel.applyDocuments);
+    const buildSnap = (typeof window !== "undefined" && window.buildSnapshot) || (typeof window !== "undefined" && window.VCTSnapshotModel && window.VCTSnapshotModel.buildSnapshot);
     const state = applyDocs(entries, byChallenge);
 
     // Reconcile duplicate match numbers deterministically by matchId tie-break
@@ -213,22 +218,24 @@
     try { data = state.data; } catch (_) {}
     try { activeChallenges = state.activeChallenges; } catch (_) {}
     try { archives = state.archives; } catch (_) {}
-    window.data = state.data;
-    window.activeChallenges = state.activeChallenges;
-    window.archives = state.archives;
+    if (typeof window !== "undefined") {
+      window.data = state.data;
+      window.activeChallenges = state.activeChallenges;
+      window.archives = state.archives;
+    }
 
     // These run at parse time on the localStorage path; re-run them now that
     // the real data has arrived.
     const normFn = typeof normalizeStoredChallenges === "function"
       ? normalizeStoredChallenges
-      : (typeof window.normalizeStoredChallenges === "function" ? window.normalizeStoredChallenges : null);
+      : (typeof window !== "undefined" && typeof window.normalizeStoredChallenges === "function" ? window.normalizeStoredChallenges : null);
     if (normFn) normFn();
 
     // Snapshot after normalization so lastSyncedSnapshot reflects normalized fields
     lastSyncedSnapshot = buildSnap({
-      data: typeof data !== "undefined" ? data : window.data,
-      activeChallenges: typeof activeChallenges !== "undefined" ? activeChallenges : window.activeChallenges,
-      archives: typeof archives !== "undefined" ? archives : window.archives,
+      data: typeof data !== "undefined" ? data : (typeof window !== "undefined" ? window.data : undefined),
+      activeChallenges: typeof activeChallenges !== "undefined" ? activeChallenges : (typeof window !== "undefined" ? window.activeChallenges : []),
+      archives: typeof archives !== "undefined" ? archives : (typeof window !== "undefined" ? window.archives : []),
     });
     hydrated = true;
 
@@ -236,7 +243,7 @@
     // localStorage as last-known-good cache for first paint.
     const persistLocalFn = typeof persistLocal === "function"
       ? persistLocal
-      : (typeof window.persistLocal === "function" ? window.persistLocal : null);
+      : (typeof window !== "undefined" && typeof window.persistLocal === "function" ? window.persistLocal : null);
     if (persistLocalFn) persistLocalFn();
 
     if (anyRenumbered) {
@@ -245,12 +252,11 @@
 
     const renderFn = typeof render === "function"
       ? render
-      : (typeof window.render === "function" ? window.render : null);
+      : (typeof window !== "undefined" && typeof window.render === "function" ? window.render : null);
     if (renderFn) renderFn();
   }
 
-  window.VCT = window.VCT || {};
-  window.VCT.cloud = {
+  const api = {
     pushChanges,
     start,
     reconcileMatchNumbers,
@@ -259,7 +265,12 @@
     get tombstones() { return tombstones; },
   };
 
+  if (typeof window !== "undefined") {
+    window.VCT = window.VCT || {};
+    window.VCT.cloud = api;
+  }
+
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { reconcileMatchNumbers };
+    module.exports = api;
   }
 })();

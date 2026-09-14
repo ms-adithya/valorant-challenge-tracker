@@ -131,3 +131,44 @@ test("reconciles duplicate match numbers deterministically", () => {
     { id: "m_c", no: 2 },
   ].sort((a, b) => a.no - b.no));
 });
+
+test("reconciles duplicate match numbers into existing gaps without displacing higher numbers", () => {
+  const { reconcileMatchNumbers } = require("../js/cloud/cloud-sync.js");
+  const c = challenge({
+    matches: [
+      { matchId: "m_1", no: 1 },
+      { matchId: "m_dup", no: 1 },
+      { matchId: "m_2", no: 2 },
+      { matchId: "m_4", no: 4 },
+    ],
+  });
+  const renumbered = reconcileMatchNumbers(c);
+  assert.strictEqual(renumbered, true);
+  assert.deepStrictEqual(c.matches.map((m) => ({ id: m.matchId, no: m.no })), [
+    { id: "m_1", no: 1 },
+    { id: "m_2", no: 2 },
+    { id: "m_dup", no: 3 },
+    { id: "m_4", no: 4 },
+  ]);
+});
+
+test("reconciles invalid or negative match numbers and leaves clean challenges unchanged", () => {
+  const { reconcileMatchNumbers } = require("../js/cloud/cloud-sync.js");
+  const clean = challenge({
+    matches: [
+      { matchId: "m_1", no: 1 },
+      { matchId: "m_2", no: 2 },
+    ],
+  });
+  assert.strictEqual(reconcileMatchNumbers(clean), false);
+
+  const invalid = challenge({
+    matches: [
+      { matchId: "m_1", no: 1 },
+      { matchId: "m_bad", no: -5 },
+      { matchId: "m_zero", no: 0 },
+    ],
+  });
+  assert.strictEqual(reconcileMatchNumbers(invalid), true);
+  assert.deepStrictEqual(invalid.matches.map((m) => m.no), [1, 2, 3]);
+});
