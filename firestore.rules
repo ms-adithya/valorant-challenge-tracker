@@ -1,7 +1,78 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // null passes: these fields are legitimately optional (see v9.6).
+    function inRange(v, lo, hi) {
+      return v == null || (v is number && v >= lo && v <= hi);
+    }
+    function nonNeg(v) {
+      return v == null || (v is number && v >= 0);
+    }
+
+    function validChallenge(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 200
+        && d.target is int && d.target >= 1
+        && d.startRank is string
+        && (d.targetRank == null || d.targetRank is string)
+        && inRange(d.startRR, 0, 100)
+        && d.status in ['active', 'archived']
+        && d.isOpen is bool;
+    }
+
+    function validMatch(d) {
+      return d.no is int && d.no >= 1
+        && d.agent is string
+        && d.map is string
+        && d.result in ['Win', 'Loss', 'Draw']
+        && d.rankAfter is string
+        && d.rankStatus in ['Promoted', 'Demoted', 'Placed', 'Same Rank']
+        && d.myScore is int && d.myScore >= 0
+        && d.enemyScore is int && d.enemyScore >= 0
+        && d.rounds is int && d.rounds == d.myScore + d.enemyScore
+        && inRange(d.hs, 0, 100)
+        && inRange(d.kast, 0, 100)
+        && inRange(d.rrAfter, 0, 100)
+        && nonNeg(d.kills) && nonNeg(d.deaths) && nonNeg(d.assists)
+        && nonNeg(d.acs) && nonNeg(d.adr)
+        && nonNeg(d.firstKills) && nonNeg(d.firstDeaths) && nonNeg(d.multiKills)
+        && d.source in ['manual', 'import', 'riot'];
+    }
+
+    match /users/{uid} {
+      allow read, delete: if signedInAs(uid);
+
+      // `riot` is written only by the Admin SDK, which bypasses rules entirely.
+      allow create: if signedInAs(uid)
+                    && !request.resource.data.keys().hasAny(['riot']);
+      allow update: if signedInAs(uid)
+                    && !request.resource.data.diff(resource.data)
+                          .affectedKeys().hasAny(['riot']);
+
+      match /challenges/{challengeId} {
+        allow read, delete: if signedInAs(uid);
+        allow create, update: if signedInAs(uid)
+                              && validChallenge(request.resource.data);
+
+        match /matches/{matchId} {
+          allow read, delete: if signedInAs(uid);
+          allow create, update: if signedInAs(uid)
+                                && validMatch(request.resource.data);
+        }
+      }
+
+      match /meta/{docId} {
+        allow read, write: if signedInAs(uid);
+      }
+    }
+
+    // PUUID -> uid uniqueness index. Admin SDK only; no client access at all.
+    match /riotAccounts/{puuid} {
       allow read, write: if false;
     }
   }
