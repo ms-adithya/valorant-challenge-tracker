@@ -169,7 +169,7 @@ test("owner can read and write meta documents such as tombstones and migration",
   await assertSucceeds(db.doc("users/alice/meta/migration").get());
 
   const bob = asBob();
-  await assertFails(db.doc("users/alice/meta/tombstones").get());
+  await assertFails(bob.doc("users/alice/meta/tombstones").get());
   await assertFails(
     bob.doc("users/alice/meta/tombstones").set({ c_c1: new Date().toISOString() })
   );
