@@ -391,4 +391,125 @@ test("unauthorized operations: foreign user cannot delete challenge, matches, or
   await assertFails(bob.doc("users/alice/meta/tombstones").delete());
 });
 
+test("atomic delete transaction: complete successful delete leaves doc absent and tombstone present", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_del");
+  const mRef = alice.doc("users/alice/challenges/c_del/matches/m_del");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  // Setup challenge and match
+  await assertSucceeds(cRef.set(validChallenge));
+  await assertSucceeds(mRef.set(validMatch));
+
+  // Atomic batch delete mimicking cloud-sync.js
+  const batch = alice.batch();
+  batch.delete(cRef);
+  batch.delete(mRef);
+  batch.set(tsRef, { c_c_del: "2026-09-15T00:00:00Z", m_c_del_m_del: "2026-09-15T00:00:00Z" }, { merge: true });
+  await assertSucceeds(batch.commit());
+
+  // Verify both: target docs are absent AND tombstones exist
+  const cSnap = await cRef.get();
+  const mSnap = await mRef.get();
+  const tsSnap = await tsRef.get();
+  assert.strictEqual(cSnap.exists, false, "Challenge doc must be absent after delete");
+  assert.strictEqual(mSnap.exists, false, "Match doc must be absent after delete");
+  assert.ok(tsSnap.exists, "Tombstone doc must exist");
+  assert.ok(tsSnap.data()?.c_c_del, "Challenge tombstone must be recorded");
+  assert.ok(tsSnap.data()?.m_c_del_m_del, "Match tombstone must be recorded");
+});
+
+test("batch atomicity & failure-path: failing batch cannot leave doc deleted while tombstone is absent", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_atomic");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  await assertSucceeds(cRef.set(validChallenge));
+
+  // Construct batch with delete + tombstone + an invalid write that fails security rules
+  const batch = alice.batch();
+  batch.delete(cRef);
+  batch.set(tsRef, { c_c_atomic: "2026-09-15T00:00:00Z" }, { merge: true });
+  batch.set(alice.doc("users/alice/challenges/c_illegal"), { ...validChallenge, target: -10 }); // Fails rules!
+
+  await assertFails(batch.commit());
+
+  // Verify atomicity: document remains intact and tombstone is absent
+  const cSnap = await cRef.get();
+  const tsSnap = await tsRef.get();
+  assert.strictEqual(cSnap.exists, true, "Challenge doc must remain intact after aborted batch");
+  assert.strictEqual(tsSnap.data()?.c_c_atomic, undefined, "Tombstone must not be committed on failed batch");
+});
+
+test("write barrier Scenario 1: delete committed first permanently rejects subsequent stale writes", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_scen1");
+  const mRef = alice.doc("users/alice/challenges/c_scen1/matches/m1");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  await assertSucceeds(cRef.set(validChallenge));
+  await assertSucceeds(mRef.set(validMatch));
+
+  // Atomic delete and tombstone commit
+  const batch = alice.batch();
+  batch.delete(cRef);
+  batch.delete(mRef);
+  batch.set(tsRef, { c_c_scen1: "2026-09-15T00:00:00Z", m_c_scen1_m1: "2026-09-15T00:00:00Z" }, { merge: true });
+  await assertSucceeds(batch.commit());
+
+  // Subsequent stale create or update for challenge is rejected
+  await assertFails(cRef.set(validChallenge));
+  await assertFails(cRef.update({ name: "Stale resurrection" }));
+
+  // Subsequent stale create or update for match is rejected
+  await assertFails(mRef.set(validMatch));
+  await assertFails(mRef.update({ agent: "Omen" }));
+});
+
+test("write barrier Scenario 2: stale write commits first, then delete+tombstone commits and locks writes", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_scen2");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  await assertSucceeds(cRef.set(validChallenge));
+
+  // 1. Stale write commits first
+  await assertSucceeds(cRef.update({ name: "Stale Offline Change" }));
+  const preSnap = await cRef.get();
+  assert.strictEqual(preSnap.data().name, "Stale Offline Change");
+
+  // 2. Later delete+tombstone commits
+  const batch = alice.batch();
+  batch.delete(cRef);
+  batch.set(tsRef, { c_c_scen2: "2026-09-15T00:00:00Z" }, { merge: true });
+  await assertSucceeds(batch.commit());
+
+  // 3. Document is deleted, and any further writes are rejected
+  const postSnap = await cRef.get();
+  assert.strictEqual(postSnap.exists, false);
+  await assertFails(cRef.update({ name: "Another stale write" }));
+  await assertFails(cRef.set(validChallenge));
+});
+
+test("parent tombstone cascade block: deleted challenge tombstone blocks new and updated child matches", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_parent_tomb");
+  const m1Ref = alice.doc("users/alice/challenges/c_parent_tomb/matches/m1");
+  const mNewRef = alice.doc("users/alice/challenges/c_parent_tomb/matches/m_new");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  await assertSucceeds(cRef.set(validChallenge));
+  await assertSucceeds(m1Ref.set(validMatch));
+
+  // Tombstone parent challenge only (simulating scenario before match cleanup batch arrives)
+  await assertSucceeds(tsRef.set({ c_c_parent_tomb: "2026-09-15T00:00:00Z" }, { merge: true }));
+
+  // Any attempt to update existing match m1 is rejected by parent tombstone rule
+  await assertFails(m1Ref.update({ agent: "Reyna" }));
+
+  // Any attempt to create new match m_new under tombstoned parent is rejected
+  await assertFails(mNewRef.set({ ...validMatch, no: 2 }));
+});
+
+
 
