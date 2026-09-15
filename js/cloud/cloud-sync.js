@@ -6,6 +6,8 @@
   let pushing = false;
   let pushQueued = false;
   let tombstones = {};
+  let lastRawEntries = null;
+  let lastRawByChallenge = null;
 
   function userRoot(uid) {
     const vct = typeof window !== "undefined" ? window.VCT : null;
@@ -173,10 +175,35 @@
     }
 
     // Subscribe to durable tombstones
+    // Fetch initial tombstones before attaching challenge listener to eliminate race condition
     const tombstonesRef = fx.doc(db, "users", uid, "meta", "tombstones");
+    try {
+      const initSnap = await fx.getDoc(tombstonesRef);
+      if (initSnap && initSnap.exists()) {
+        tombstones = initSnap.data() || {};
+      }
+    } catch (err) {
+      console.warn("VCT: initial tombstones fetch failed", err);
+    }
+
+    // Subscribe to durable tombstones for subsequent out-of-band updates
     fx.onSnapshot(tombstonesRef, (snap) => {
       if (snap && snap.exists()) {
         tombstones = snap.data() || {};
+        const prevKeys = new Set(Object.keys(tombstones));
+        const nextData = snap.data() || {};
+        tombstones = nextData;
+        const newKeys = Object.keys(nextData).filter((k) => !prevKeys.has(k));
+        // If newly tombstoned items affect current in-memory challenge/match data, rehydrate immediately
+        if (newKeys.length > 0 && lastRawEntries && lastRawByChallenge) {
+          const filteredEntries = lastRawEntries.filter((entry) => !tombstones["c_" + entry.id]);
+          const filteredByChallenge = {};
+          for (const entry of filteredEntries) {
+            const ms = lastRawByChallenge[entry.id] || [];
+            filteredByChallenge[entry.id] = ms.filter((m) => !tombstones["m_" + entry.id + "_" + m.id]);
+          }
+          rehydrate(filteredEntries, filteredByChallenge);
+        }
       }
     }, (err) => console.warn("VCT: tombstones subscription failed", err));
 
@@ -184,9 +211,8 @@
     const challengesRef = fx.collection(db, "users", uid, "challenges");
     fx.onSnapshot(challengesRef, async (snap) => {
       const seq = ++latestSnapshotSeq;
-      const entries = snap.docs
-        .map((d) => ({ id: d.id, doc: d.data() }))
-        .filter((entry) => !tombstones["c_" + entry.id]);
+      lastRawEntries = snap.docs.map((d) => ({ id: d.id, doc: d.data() }));
+      const entries = lastRawEntries.filter((entry) => !tombstones["c_" + entry.id]);
       const byChallenge = {};
       await Promise.all(entries.map(async (entry) => {
         const matchesRef = fx.collection(db, "users", uid, "challenges", entry.id, "matches");
@@ -196,6 +222,7 @@
           .filter((m) => !tombstones["m_" + entry.id + "_" + m.id]);
       }));
       if (seq !== latestSnapshotSeq) return;
+      lastRawByChallenge = byChallenge;
       rehydrate(entries, byChallenge);
     }, (err) => console.error("VCT: challenge subscription failed", err));
   }
