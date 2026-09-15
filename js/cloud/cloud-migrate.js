@@ -137,10 +137,22 @@
 
     // Verify before recording success. A mismatch means the guard is never
     // written, so the next load retries rather than silently accepting loss.
-    const written = await fx.getDocs(fx.collection(db, "users", uid, "challenges"));
-    if (written.size !== counts.challengeCount) {
+    const writtenChallenges = await fx.getDocs(fx.collection(db, "users", uid, "challenges"));
+    if (writtenChallenges.size !== counts.challengeCount) {
       throw new Error(
-        `Migration verification failed: expected ${counts.challengeCount} challenges, found ${written.size}`
+        `Migration verification failed: expected ${counts.challengeCount} challenges, found ${writtenChallenges.size}`
+      );
+    }
+
+    let writtenMatchesCount = 0;
+    for (const cDoc of writtenChallenges.docs) {
+      const matchesRef = fx.collection(db, "users", uid, "challenges", cDoc.id, "matches");
+      const mDocs = await fx.getDocs(matchesRef);
+      writtenMatchesCount += mDocs.size;
+    }
+    if (writtenMatchesCount !== counts.matchCount) {
+      throw new Error(
+        `Migration verification failed: expected ${counts.matchCount} matches, found ${writtenMatchesCount}`
       );
     }
 
