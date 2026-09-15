@@ -86,6 +86,10 @@
       ];
       if (!changes.length) return;
 
+      const deletedChallenges = new Set(
+        changes.filter((c) => c.kind === "challenge" && c.action === "delete").map((c) => c.key)
+      );
+
       const { fx, db, uid } = VCT;
       for (const part of chunkFn(changes, 400)) {
         const batch = fx.writeBatch(db);
@@ -129,8 +133,14 @@
 
         // Subcollection writes do not notify parent collection listeners.
         // Touch parent challenge updatedAt so onSnapshot(challengesRef) fires across all clients.
+        // Do NOT touch a parent challenge if it was deleted, tombstoned, or created in this batch.
         for (const cId of challengesToTouch) {
-          if (!createdChallenges.has(cId) && !tombstones["c_" + cId]) {
+          if (
+            !createdChallenges.has(cId) &&
+            !deletedChallenges.has(cId) &&
+            !tombstones["c_" + cId] &&
+            !tombstoneUpdates["c_" + cId]
+          ) {
             batch.update(fx.doc(db, "users", uid, "challenges", cId), { updatedAt: fx.serverTimestamp() });
           }
         }
@@ -189,8 +199,8 @@
     // Subscribe to durable tombstones for subsequent out-of-band updates
     fx.onSnapshot(tombstonesRef, (snap) => {
       if (snap && snap.exists()) {
-        tombstones = snap.data() || {};
-        const prevKeys = new Set(Object.keys(tombstones));
+        const previous = tombstones || {};
+        const prevKeys = new Set(Object.keys(previous));
         const nextData = snap.data() || {};
         tombstones = nextData;
         const newKeys = Object.keys(nextData).filter((k) => !prevKeys.has(k));
@@ -298,6 +308,9 @@
   }
 
   if (typeof module !== "undefined" && module.exports) {
+    api._setLastSyncedSnapshot = (snap) => { lastSyncedSnapshot = snap; };
+    api._setHydrated = (val) => { hydrated = val; };
+    api._setTombstones = (t) => { tombstones = t; };
     module.exports = api;
   }
 })();

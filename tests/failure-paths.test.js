@@ -1156,3 +1156,89 @@ test("challenge target validation: rejects non-integer and non-positive targets"
   assert.strictEqual(isValidTarget(null), false);
 });
 
+// ---------------------------------------------------------------------------
+// 16. Cloud Sync Batch Composition & Parent Touch Safety
+// ---------------------------------------------------------------------------
+
+test("cloud sync batch: deleting challenge with multiple matches deletes all docs and tombstones without updating parent", async () => {
+  const cloudSync = require("../js/cloud/cloud-sync.js");
+  const origWindow = global.window;
+  const origData = global.data;
+  const origActive = global.activeChallenges;
+  const origArchives = global.archives;
+
+  const recordedOps = { deletes: [], updates: [], sets: [] };
+  const mockBatch = {
+    delete: (ref) => recordedOps.deletes.push(ref),
+    update: (ref, data) => recordedOps.updates.push({ ref, data }),
+    set: (ref, data, opts) => recordedOps.sets.push({ ref, data, opts }),
+    commit: async () => {},
+  };
+
+  const mockFx = {
+    writeBatch: () => mockBatch,
+    doc: (db, ...parts) => parts.join("/"),
+    serverTimestamp: () => "MOCK_SERVER_TIMESTAMP",
+  };
+
+  global.window = {
+    VCT: { fx: mockFx, db: {}, uid: "alice" },
+    buildSnapshot,
+    diffSnapshots,
+    chunk,
+  };
+
+  try {
+    const c = {
+      id: "c_del_test",
+      name: "Challenge With Multi Matches",
+      target: 10,
+      startRank: "Silver 1",
+      startRR: 30,
+      matches: [
+        { matchId: "m1", no: 1, agent: "Jett", map: "Ascent", result: "Win", myScore: 13, enemyScore: 5, rounds: 18 },
+        { matchId: "m2", no: 2, agent: "Omen", map: "Haven", result: "Loss", myScore: 8, enemyScore: 13, rounds: 21 },
+      ],
+    };
+
+    // Simulate state where c was previously synced
+    const initialSnap = buildSnapshot({ data: c, activeChallenges: [c], archives: [] });
+    cloudSync._setHydrated(true);
+    cloudSync._setLastSyncedSnapshot(initialSnap);
+    cloudSync._setTombstones({});
+
+    // User deletes the challenge: globals are now empty
+    global.data = null;
+    global.activeChallenges = [];
+    global.archives = [];
+
+    // Trigger cloud push
+    await cloudSync.pushChanges();
+
+    // 1. Verify that the challenge and all child matches were staged for deletion
+    assert.strictEqual(recordedOps.deletes.length, 3);
+    assert.ok(recordedOps.deletes.includes("users/alice/challenges/c_del_test"));
+    assert.ok(recordedOps.deletes.includes("users/alice/challenges/c_del_test/matches/m1"));
+    assert.ok(recordedOps.deletes.includes("users/alice/challenges/c_del_test/matches/m2"));
+
+    // 2. Verify that durable tombstones were recorded for challenge and both matches
+    assert.strictEqual(recordedOps.sets.length, 1);
+    assert.strictEqual(recordedOps.sets[0].ref, "users/alice/meta/tombstones");
+    assert.ok("c_c_del_test" in recordedOps.sets[0].data);
+    assert.ok("m_c_del_test_m1" in recordedOps.sets[0].data);
+    assert.ok("m_c_del_test_m2" in recordedOps.sets[0].data);
+
+    // 3. CRUCIAL REGRESSION CHECK:
+    // Verify that NO update was staged against the deleted parent challenge!
+    const parentUpdates = recordedOps.updates.filter((u) => u.ref === "users/alice/challenges/c_del_test");
+    assert.strictEqual(parentUpdates.length, 0, "Deleted parent challenge must NOT be touched with batch.update");
+  } finally {
+    global.window = origWindow;
+    global.data = origData;
+    global.activeChallenges = origActive;
+    global.archives = origArchives;
+    cloudSync._setHydrated(false);
+  }
+});
+
+
