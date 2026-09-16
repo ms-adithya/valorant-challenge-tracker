@@ -19,7 +19,7 @@ Developer commands available via `package.json`:
 
 - `npm test` - Runs the 76 pure Node.js unit and integration tests (`node --test tests/*.test.js`). Fast, local, offline, with zero external dependencies.
 - `npm run test:rules` - Runs the 35 Firestore Security Rules unit tests against the local Firestore emulator (`firebase emulators:exec --only firestore "node --test tests/rules/firestore-rules.test.js"`). Requires a local Java runtime (Microsoft OpenJDK 21).
-- `npm run emulators` - Starts local Firebase emulators (Auth, Firestore, Hosting).
+- `npm run emulators` - Starts local Firebase emulators (used for manual rules testing or inspection).
 - `npm run deploy` - Deploys static files to Firebase Hosting.
 - `npm run deploy:rules` - Deploys updated Firestore security rules to Cloud Firestore.
 

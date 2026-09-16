@@ -33,25 +33,16 @@ Launch the live tracker directly in any modern desktop or mobile browser:
 
 ### Running Locally
 
-The client application is static HTML, CSS, and vanilla JavaScript with zero build steps or bundlers required.
-
-#### Option A: Lightweight Static Server (Local-Only Mode)
-Serve the workspace with any local HTTP server:
+The client application is static HTML, CSS, and vanilla JavaScript with zero build steps or bundlers required. Serve the repository with any local static HTTP server:
 
 ```bash
 # Using Python 3
 python -m http.server 8000
 ```
-Then open `http://localhost:8000` in your browser. (Alternatively, use VS Code *Live Server*).
+Then open `http://localhost:8000` in your browser. (Alternatively, use VS Code *Live Server* or any static file server).
 
-#### Option B: Firebase Local Emulator Suite (Full Cloud Simulation)
-To test or develop Cloud Sync, Firestore security rules, and Auth locally:
-
-```bash
-# Start Auth, Firestore, and Hosting emulators
-npm run emulators
-```
-Then open `http://localhost:5000` in your browser.
+> [!NOTE]
+> The local Firebase Emulator Suite is dedicated to executing automated Firestore Security Rules unit tests (`npm run test:rules`). The browser runtime is a static web client that connects to the project services configured in `js/cloud/firebase-boot.js`.
 
 ---
 

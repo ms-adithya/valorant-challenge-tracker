@@ -45,8 +45,7 @@ You can serve the static files with any local HTTP server:
 # Using Python 3
 python -m http.server 8000
 
-# Or using the Firebase Local Emulator Suite
-npm run emulators
+# Or using VS Code Live Server
 ```
 
 ### Running Tests
