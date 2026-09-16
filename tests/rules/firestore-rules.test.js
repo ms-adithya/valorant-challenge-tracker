@@ -557,6 +557,157 @@ test("generic meta documents remain writable while tombstones are protected", as
   await assertSucceeds(migRef.update({ challengeCount: 3 }));
 });
 
+test("delete invariant: bare challenge delete without tombstone is rejected", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_bare");
+  await assertSucceeds(cRef.set(validChallenge));
+
+  // Bare delete without tombstone must fail
+  await assertFails(cRef.delete());
+
+  // In a batch without tombstone, must also fail
+  const b = alice.batch();
+  b.delete(cRef);
+  await assertFails(b.commit());
+});
+
+test("delete invariant: bare match delete without tombstone is rejected", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c1");
+  const mRef = alice.doc("users/alice/challenges/c1/matches/m_bare");
+  await assertSucceeds(cRef.set(validChallenge));
+  await assertSucceeds(mRef.set(validMatch));
+
+  // Bare delete without tombstone must fail
+  await assertFails(mRef.delete());
+
+  // In a batch without tombstone, must also fail
+  const b = alice.batch();
+  b.delete(mRef);
+  await assertFails(b.commit());
+});
+
+test("delete invariant: delete with unrelated tombstone is rejected", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c1");
+  const mRef = alice.doc("users/alice/challenges/c1/matches/m1");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+  await assertSucceeds(cRef.set(validChallenge));
+  await assertSucceeds(mRef.set(validMatch));
+
+  // Challenge delete paired with wrong tombstone key
+  const b1 = alice.batch();
+  b1.delete(cRef);
+  b1.set(tsRef, { c_wrong_id: "2026-09-16T00:00:00Z" }, { merge: true });
+  await assertFails(b1.commit());
+
+  // Match delete paired with wrong tombstone key
+  const b2 = alice.batch();
+  b2.delete(mRef);
+  b2.set(tsRef, { m_c1_wrong: "2026-09-16T00:00:00Z" }, { merge: true });
+  await assertFails(b2.commit());
+});
+
+test("delete invariant: delete with matching tombstone in same batch succeeds", async () => {
+  const alice = asAlice();
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  // Case A: Solo match deletion with m_<cId>_<mId> tombstone
+  const c1Ref = alice.doc("users/alice/challenges/c1");
+  const m1Ref = alice.doc("users/alice/challenges/c1/matches/m1");
+  await assertSucceeds(c1Ref.set(validChallenge));
+  await assertSucceeds(m1Ref.set(validMatch));
+
+  const b1 = alice.batch();
+  b1.delete(m1Ref);
+  b1.set(tsRef, { m_c1_m1: "2026-09-16T00:00:00Z" }, { merge: true });
+  await assertSucceeds(b1.commit());
+
+  // Case B: Solo challenge deletion with c_<cId> tombstone
+  const c2Ref = alice.doc("users/alice/challenges/c2");
+  await assertSucceeds(c2Ref.set(validChallenge));
+
+  const b2 = alice.batch();
+  b2.delete(c2Ref);
+  b2.set(tsRef, { c_c2: "2026-09-16T00:00:00Z" }, { merge: true });
+  await assertSucceeds(b2.commit());
+
+  // Case C: Cascade challenge deletion with matches using c_<cId> tombstone
+  const c3Ref = alice.doc("users/alice/challenges/c3");
+  const m3Ref = alice.doc("users/alice/challenges/c3/matches/m3");
+  await assertSucceeds(c3Ref.set(validChallenge));
+  await assertSucceeds(m3Ref.set(validMatch));
+
+  const b3 = alice.batch();
+  b3.delete(c3Ref);
+  b3.delete(m3Ref);
+  b3.set(tsRef, { c_c3: "2026-09-16T00:00:00Z" }, { merge: true });
+  await assertSucceeds(b3.commit());
+});
+
+test("delete invariant: failed batch with delete and tombstone rolls back entirely", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_rollback");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+  await assertSucceeds(cRef.set(validChallenge));
+
+  // Batch contains valid delete + correct tombstone, but also an invalid operation (violates validChallenge rules)
+  const b = alice.batch();
+  b.delete(cRef);
+  b.set(tsRef, { c_c_rollback: "2026-09-16T00:00:00Z" }, { merge: true });
+  b.set(alice.doc("users/alice/challenges/c_invalid"), { name: "" }); // invalid: empty name
+  await assertFails(b.commit());
+
+  // Verify rollback: challenge document still exists
+  const snapC = await cRef.get();
+  assert.strictEqual(snapC.exists, true);
+
+  // Verify rollback: tombstone document does not have c_c_rollback
+  const snapTs = await tsRef.get();
+  assert.strictEqual(snapTs.data()?.c_c_rollback, undefined);
+});
+
+test("delete invariant: subsequent write to tombstoned challenge or match is rejected", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_stale");
+  const mRef = alice.doc("users/alice/challenges/c_stale/matches/m1");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+  await assertSucceeds(cRef.set(validChallenge));
+  await assertSucceeds(mRef.set(validMatch));
+
+  // Valid atomic deletion of challenge and tombstone
+  const b = alice.batch();
+  b.delete(cRef);
+  b.delete(mRef);
+  b.set(tsRef, { c_c_stale: "2026-09-16T00:00:00Z" }, { merge: true });
+  await assertSucceeds(b.commit());
+
+  // Subsequent recreate of challenge is rejected
+  await assertFails(cRef.set(validChallenge));
+
+  // Subsequent recreate of match under tombstoned challenge is rejected
+  await assertFails(mRef.set(validMatch));
+});
+
+test("delete invariant: tombstone merge maintains existing keys while appending new tombstone", async () => {
+  const alice = asAlice();
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+  await assertSucceeds(tsRef.set({ c_preexisting: "2026-09-15T00:00:00Z" }));
+
+  const cRef = alice.doc("users/alice/challenges/c_newly_deleted");
+  await assertSucceeds(cRef.set(validChallenge));
+
+  const b = alice.batch();
+  b.delete(cRef);
+  b.set(tsRef, { c_c_newly_deleted: "2026-09-16T00:00:00Z" }, { merge: true });
+  await assertSucceeds(b.commit());
+
+  const snap = await tsRef.get();
+  assert.strictEqual(snap.data()?.c_preexisting, "2026-09-15T00:00:00Z");
+  assert.strictEqual(snap.data()?.c_c_newly_deleted, "2026-09-16T00:00:00Z");
+});
+
+
 
 
 

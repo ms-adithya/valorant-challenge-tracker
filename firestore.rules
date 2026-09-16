@@ -53,6 +53,15 @@ service cloud.firestore {
       return exists(path) && get(path).data.keys().hasAny(['c_' + cId, 'm_' + cId + '_' + mId]);
     }
 
+    function isTombstonedChallengeAfter(uid, cId) {
+      let path = /databases/$(database)/documents/users/$(uid)/meta/tombstones;
+      return existsAfter(path) && getAfter(path).data.keys().hasAny(['c_' + cId]);
+    }
+    function isTombstonedMatchAfter(uid, cId, mId) {
+      let path = /databases/$(database)/documents/users/$(uid)/meta/tombstones;
+      return existsAfter(path) && getAfter(path).data.keys().hasAny(['c_' + cId, 'm_' + cId + '_' + mId]);
+    }
+
     match /users/{uid} {
       allow read, delete: if signedInAs(uid);
 
@@ -64,13 +73,15 @@ service cloud.firestore {
                           .affectedKeys().hasAny(['riot']);
 
       match /challenges/{challengeId} {
-        allow read, delete: if signedInAs(uid);
+        allow read: if signedInAs(uid);
+        allow delete: if signedInAs(uid) && isTombstonedChallengeAfter(uid, challengeId);
         allow create, update: if signedInAs(uid)
                               && validChallenge(request.resource.data)
                               && !isTombstonedChallenge(uid, challengeId);
 
         match /matches/{matchId} {
-          allow read, delete: if signedInAs(uid);
+          allow read: if signedInAs(uid);
+          allow delete: if signedInAs(uid) && isTombstonedMatchAfter(uid, challengeId, matchId);
           allow create, update: if signedInAs(uid)
                                 && validMatch(request.resource.data)
                                 && !isTombstonedMatch(uid, challengeId, matchId);
