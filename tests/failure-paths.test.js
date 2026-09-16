@@ -1379,5 +1379,87 @@ test("cloud sync batching D: deletions plus ordinary match updates count tombsto
   assert.strictEqual(projected, 5, `Expected 5 operations (2 deletes + 1 update + 1 parent touch + 1 tombstone), got ${projected}`);
 });
 
+test("dialogs: delegated click on data-notice-close dismisses notice modal", () => {
+  const fs = require("node:fs");
+  const vm = require("node:vm");
+  const code = fs.readFileSync(require.resolve("../js/dialogs.js"), "utf8");
+
+  const listeners = {};
+  const mockClassList = new Set(["hidden"]);
+  const mockAttrs = { "aria-hidden": "true" };
+
+  const noticeModal = {
+    classList: {
+      contains: (c) => mockClassList.has(c),
+      remove: (c) => mockClassList.delete(c),
+      add: (c) => mockClassList.add(c),
+    },
+    setAttribute: (k, v) => { mockAttrs[k] = String(v); },
+  };
+  const noticeTitle = { textContent: "" };
+  const noticeMessage = { textContent: "" };
+  const noticeOkBtn = { focus: () => {} };
+
+  const elements = {
+    noticeModal,
+    noticeTitle,
+    noticeMessage,
+    noticeOkBtn,
+  };
+
+  const origDocument = global.document;
+  const origDollar = global.$;
+  const origReqAnim = global.requestAnimationFrame;
+
+  global.document = {
+    querySelectorAll: () => [],
+    getElementById: (id) => elements[id] || null,
+    addEventListener: (evt, handler) => {
+      listeners[evt] = listeners[evt] || [];
+      listeners[evt].push(handler);
+    },
+  };
+  global.$ = (id) => elements[id] || null;
+  global.requestAnimationFrame = (fn) => fn();
+
+  try {
+    const ctx = vm.createContext({
+      document: global.document,
+      $: global.$,
+      requestAnimationFrame: global.requestAnimationFrame,
+      console,
+    });
+    vm.runInContext(code, ctx);
+
+    // Show notice
+    ctx.showAppNotice("Cloud sync is unavailable", "Offline mode");
+    assert.strictEqual(mockClassList.has("hidden"), false);
+    assert.strictEqual(mockAttrs["aria-hidden"], "false");
+    assert.strictEqual(noticeTitle.textContent, "Offline mode");
+    assert.strictEqual(noticeMessage.textContent, "Cloud sync is unavailable");
+
+    // Simulate clicking Got it button via delegated event listener
+    const clickHandlers = listeners["click"] || [];
+    assert.ok(clickHandlers.length > 0, "Expected at least one document click handler");
+
+    const mockEvent = {
+      target: {
+        closest: (sel) => (sel === "[data-notice-close]" ? {} : null),
+      },
+    };
+    for (const h of clickHandlers) {
+      h(mockEvent);
+    }
+
+    // Modal should now be hidden
+    assert.strictEqual(mockClassList.has("hidden"), true);
+    assert.strictEqual(mockAttrs["aria-hidden"], "true");
+  } finally {
+    global.document = origDocument;
+    global.$ = origDollar;
+    global.requestAnimationFrame = origReqAnim;
+  }
+});
+
 
 
