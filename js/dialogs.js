@@ -53,3 +53,9 @@ function showToast(message,tone="success"){
  setTimeout(()=>{el.classList.remove("show");setTimeout(()=>el.remove(),220)},2600);
 }
 document.querySelectorAll("[data-notice-close]").forEach(x=>x.addEventListener("click",closeAppNotice));
+document.addEventListener("click",(e)=>{
+ if(e.target&&e.target.closest){
+  if(e.target.closest("[data-notice-close]"))closeAppNotice();
+  if(e.target.closest("[data-confirm-cancel]"))finishConfirmation(false);
+ }
+});
