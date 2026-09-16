@@ -1,0 +1,86 @@
+# Contributing to Valorant Challenge Tracker
+
+Thank you for your interest in contributing to Valorant Challenge Tracker!
+
+To keep the application fast, lightweight, and reliable for all players, this project operates under strict architectural and documentation invariants. Please review this guide before submitting issues or opening pull requests.
+
+---
+
+## Architectural Invariants (Non-Negotiable)
+
+1. **Zero Build Step / Pure Vanilla JS**:
+   - Do **NOT** introduce bundlers (Webpack, Vite, Rollup), transpilers, or frontend frameworks (React, Vue, etc.).
+   - The browser runtime must remain pure static HTML, CSS, and vanilla JavaScript that executes directly in the browser without compilation.
+
+2. **Load-Bearing Script Order in `index.html`**:
+   - Classic scripts in `index.html` execute synchronously in parse-time order and share the global scope.
+   - Do **NOT** mark existing `<script>` tags as `async` or `defer`.
+   - Modals and dynamic UI elements must use delegated event listeners (`document.addEventListener('click', ...)`) rather than parse-time query selectors.
+
+3. **Local-First Persistence Contract**:
+   - `persist()` must always commit to browser `localStorage` first. Cloud synchronization to Firestore is additive, non-blocking, and transparent.
+
+4. **Server-Enforced Authority in Firestore**:
+   - Security and data integrity are enforced at the Firestore Security Rules boundary (`firestore.rules`).
+   - Challenge and match deletions require atomic `getAfter()` tombstone coupling under `meta/tombstones`.
+   - Batch writes must respect the operation-bounded chunking limit ($\le 400$ operations per batch).
+
+5. **Strict Documentation Boundaries**:
+   - **`README.md`**: Public overview and front door for GitHub visitors.
+   - **`index.html` (Changelog Tab)**: Player-facing release notes explaining gameplay improvements.
+   - **`DEVELOPMENT.md`**: Technical architecture, maintainer guidance, and engineering invariants.
+   - **`SECURITY.md`**: Security policy, server-enforced architecture details, and vulnerability reporting procedures.
+   - **`docs/`**: Long-term architecture specifications and design records (strictly reserved; do not modify in routine PRs).
+
+---
+
+## Local Development & Testing
+
+### Running the App Locally
+You can serve the static files with any local HTTP server:
+
+```bash
+# Using Python 3
+python -m http.server 8000
+
+# Or using the Firebase Local Emulator Suite
+npm run emulators
+```
+
+### Running Tests
+All contributions must pass the automated test suites before being merged:
+
+```bash
+# Run pure unit & failure path tests (76 tests)
+npm test
+
+# Run Firestore Security Rules tests via emulator (35 tests, requires Java 21)
+npm run test:rules
+```
+
+---
+
+## Pull Request Guidelines
+
+1. **Branch Naming**:
+   - Create a dedicated feature or fix branch from `main`:
+     - `feat/feature-name`
+     - `fix/bug-description`
+     - `docs/documentation-update`
+     - `chore/task-name`
+2. **Commit Conventions**:
+   - Use Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`).
+   - Keep commits atomic, well-described, and focused on a single change.
+3. **Checklist Before Submitting**:
+   - [ ] No new npm runtime dependencies or build tools introduced.
+   - [ ] Script order in `index.html` preserved.
+   - [ ] All 76 unit/failure tests pass (`npm test`).
+   - [ ] All 35 security rules tests pass (`npm run test:rules`) if `firestore.rules` was modified.
+   - [ ] No `.md` files in `docs/` modified.
+
+---
+
+## Reporting Issues
+
+- **Bug Reports**: Please include browser name/version, steps to reproduce, console errors (F12), and whether you were running locally or via Firebase.
+- **Security Vulnerabilities**: Do **not** open public issues. Follow our private disclosure policy in [SECURITY.md](SECURITY.md).
