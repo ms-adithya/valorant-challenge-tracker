@@ -77,8 +77,17 @@ service cloud.firestore {
         }
       }
 
+      match /meta/tombstones {
+        allow read: if signedInAs(uid);
+        allow create: if signedInAs(uid);
+        allow update: if signedInAs(uid)
+                      && request.resource.data.diff(resource.data).removedKeys().size() == 0
+                      && request.resource.data.diff(resource.data).changedKeys().size() == 0;
+        allow delete: if false;
+      }
+
       match /meta/{docId} {
-        allow read, write: if signedInAs(uid);
+        allow read, write: if signedInAs(uid) && docId != 'tombstones';
       }
     }
 

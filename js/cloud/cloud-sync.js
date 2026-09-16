@@ -52,6 +52,85 @@
     return true;
   }
 
+  function countProjectedOperations(part, deletedChallenges, currentTombstones) {
+    if (!Array.isArray(part) || part.length === 0) return 0;
+    let ops = 0;
+    const challengesToTouch = new Set();
+    const tombstoneUpdates = {};
+    const createdChallenges = new Set(
+      part.filter((c) => c.kind === "challenge" && c.action === "create").map((c) => c.key)
+    );
+    const ts = currentTombstones || {};
+
+    for (const change of part) {
+      if (change.action === "create") {
+        if (change.kind === "challenge" && ts["c_" + change.key]) continue;
+        if (change.kind === "match") {
+          const [cId, mId] = change.key.split("/");
+          if (ts["c_" + cId] || ts["m_" + cId + "_" + mId]) continue;
+          challengesToTouch.add(cId);
+        }
+        ops++;
+      } else if (change.action === "update") {
+        if (change.kind === "challenge" && ts["c_" + change.key]) continue;
+        if (change.kind === "match") {
+          const [cId, mId] = change.key.split("/");
+          if (ts["c_" + cId] || ts["m_" + cId + "_" + mId]) continue;
+          challengesToTouch.add(cId);
+        }
+        ops++;
+      } else if (change.action === "delete") {
+        ops++;
+        if (change.kind === "challenge") {
+          tombstoneUpdates["c_" + change.key] = true;
+        } else if (change.kind === "match") {
+          const [cId, mId] = change.key.split("/");
+          tombstoneUpdates["m_" + cId + "_" + mId] = true;
+          challengesToTouch.add(cId);
+        }
+      }
+    }
+
+    for (const cId of challengesToTouch) {
+      if (
+        !createdChallenges.has(cId) &&
+        (!deletedChallenges || !deletedChallenges.has(cId)) &&
+        !ts["c_" + cId] &&
+        !tombstoneUpdates["c_" + cId]
+      ) {
+        ops++;
+      }
+    }
+
+    if (Object.keys(tombstoneUpdates).length > 0) {
+      ops++;
+    }
+
+    return ops;
+  }
+
+  function chunkChangesByOperations(changes, deletedChallenges, currentTombstones, maxOps = 400) {
+    if (!Array.isArray(changes) || changes.length === 0) return [];
+    const limit = (!maxOps || maxOps <= 0) ? 400 : maxOps;
+    const chunks = [];
+    let currentChunk = [];
+
+    for (const change of changes) {
+      const candidate = [...currentChunk, change];
+      if (currentChunk.length > 0 && countProjectedOperations(candidate, deletedChallenges, currentTombstones) > limit) {
+        chunks.push(currentChunk);
+        currentChunk = [change];
+      } else {
+        currentChunk.push(change);
+      }
+    }
+
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk);
+    }
+    return chunks;
+  }
+
   async function pushChanges() {
     const VCT = typeof window !== "undefined" ? window.VCT : null;
     if (!VCT || !VCT.uid || !VCT.fx) return;
@@ -91,7 +170,7 @@
       );
 
       const { fx, db, uid } = VCT;
-      for (const part of chunkFn(changes, 400)) {
+      for (const part of chunkChangesByOperations(changes, deletedChallenges, tombstones, 400)) {
         const batch = fx.writeBatch(db);
         const challengesToTouch = new Set();
         const tombstoneUpdates = {};
@@ -300,6 +379,8 @@
     get lastSyncedSnapshot() { return lastSyncedSnapshot; },
     get hydrated() { return hydrated; },
     get tombstones() { return tombstones; },
+    countProjectedOperations,
+    chunkChangesByOperations,
   };
 
   if (typeof window !== "undefined") {

@@ -511,5 +511,52 @@ test("parent tombstone cascade block: deleted challenge tombstone blocks new and
   await assertFails(mNewRef.set({ ...validMatch, no: 2 }));
 });
 
+test("meta/tombstones append-only rules: document cannot be deleted", async () => {
+  const alice = asAlice();
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  // Create initial tombstone
+  await assertSucceeds(tsRef.set({ c_test: "2026-09-15T00:00:00Z" }));
+
+  // Alice cannot delete the tombstones document
+  await assertFails(tsRef.delete());
+});
+
+test("meta/tombstones append-only rules: existing keys cannot be removed or values altered", async () => {
+  const alice = asAlice();
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  // Initial tombstone
+  await assertSucceeds(tsRef.set({ c_orig: "2026-09-15T00:00:00Z" }));
+
+  // Overwriting without c_orig (removal of existing key) is rejected
+  await assertFails(tsRef.set({ c_new_only: "2026-09-15T00:00:00Z" }));
+
+  // Modifying value of existing key is rejected
+  await assertFails(tsRef.update({ c_orig: "2026-09-16T00:00:00Z" }));
+
+  // Appending new key via set({ ... }, { merge: true }) succeeds
+  await assertSucceeds(tsRef.set({ c_second: "2026-09-15T00:00:00Z" }, { merge: true }));
+
+  // Appending new key via update succeeds
+  await assertSucceeds(tsRef.update({ c_third: "2026-09-15T00:00:00Z" }));
+
+  // Verify all 3 keys are present
+  const snap = await tsRef.get();
+  assert.ok(snap.data()?.c_orig);
+  assert.ok(snap.data()?.c_second);
+  assert.ok(snap.data()?.c_third);
+});
+
+test("generic meta documents remain writable while tombstones are protected", async () => {
+  const alice = asAlice();
+  const migRef = alice.doc("users/alice/meta/migration");
+
+  // Alice can write and update normal meta documents like migration
+  await assertSucceeds(migRef.set({ completedAt: "2026-09-15T00:00:00Z", challengeCount: 2 }));
+  await assertSucceeds(migRef.update({ challengeCount: 3 }));
+});
+
+
 
 
