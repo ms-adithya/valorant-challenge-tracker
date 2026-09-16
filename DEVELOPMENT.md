@@ -63,7 +63,7 @@ The tracker implements a resilient, local-first synchronization model with Cloud
 ### 3. Durable Tombstones (`users/{uid}/meta/tombstones`)
 - To avoid "zombie" resurrections across concurrent clients or offline tabs, deleted challenges and matches write persistent tombstone keys (`c_<id>` and `m_<challengeId>_<matchId>`) with server timestamps into `/users/{uid}/meta/tombstones`.
 - Startup ordering: `start(uid)` fetches initial tombstones prior to subscribing to challenges, eliminating startup race conditions.
-- Real-time updates: `onSnapshot` on the tombstones document detects out-of-band deletions made by other tabs/devices and immediately evicts affected entities from local memory.
+- Real-time updates: `onSnapshot` on the tombstones document detects out-of-band deletions made by other tabs/sessions and immediately evicts affected entities from local memory.
 
 ### 4. `getAfter()` Delete-Tombstone Atomic Invariants
 - `firestore.rules` enforces that document deletions MUST be accompanied by the corresponding tombstone write in the exact same batch.
@@ -77,7 +77,7 @@ The tracker implements a resilient, local-first synchronization model with Cloud
 - Operations employ copy-on-write modifications and state rollback if `safePersist()` fails or throws, preserving memory and local storage integrity.
 
 ### Deterministic Match Number Reconciliation
-- Concurrency or multi-device imports may yield duplicate match numbers or numbering gaps.
+- Concurrency or multi-tab imports may yield duplicate match numbers or numbering gaps.
 - `reconcileMatchNumbers(challenge)` in `js/cloud/cloud-sync.js` sorts matches deterministically by `Number(a.no) - Number(b.no) || String(a.matchId).localeCompare(String(b.matchId))`.
 - Duplicate or non-positive match numbers are detected and reassigned to the lowest available positive integer gaps without shifting existing clean match numbers.
 - When reassignments occur, the player is notified via non-blocking toast/notice.

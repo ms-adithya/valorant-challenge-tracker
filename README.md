@@ -18,7 +18,7 @@ A high-performance, local-first web application designed for competitive VALORAN
 - **Publication-Ready Exports**: Generate paginated, printable PDF challenge completion reports with high-resolution layout and match histories, or export clean CSV and JSON datasets.
 - **Local-First & Phase 1 Cloud Sync**:
   - **Local-First Architecture**: Completely functional offline with immediate browser storage persistence.
-  - **Real-Time Multi-Tab Sync**: When signed in with Firebase, background synchronization propagates updates across tabs and devices in real time.
+  - **Real-Time Multi-Tab Sync**: When signed in with Firebase, background synchronization propagates updates across browser tabs in real time, with durable cloud persistence and offline recovery (cross-device sync arrives with Phase 2 account linking).
   - **Durable Tombstones**: Deletions record persistent tombstones in Cloud Firestore, preventing phantom "zombie" resurrections across concurrent sessions.
   - **Automatic Migration**: Existing local storage data automatically migrates to Cloud Firestore on first sign-in without data loss.
   - **Offline Resilience & Queueing**: Changes made while disconnected are queued and safely synchronized when connectivity resumes.
