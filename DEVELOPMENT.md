@@ -111,6 +111,8 @@ The setup form and its restore panel live outside the routed `#app` container be
 
 - `README.md` is the public project overview and front door for GitHub visitors.
 - The Changelog tab in `index.html` contains player-facing release notes explaining gameplay improvements.
+- `CONTRIBUTING.md` contains contribution guidelines, PR checklists, and non-negotiable architectural invariants.
+- `CODE_OF_CONDUCT.md` contains community standards, pledge, and enforcement procedures.
 - `DEVELOPMENT.md` contains technical architecture, maintainer guidance, and engineering invariants.
 - `SECURITY.md` contains the security policy, server-enforced architecture details, and vulnerability reporting procedures.
 - `docs/` contains planning specs and design documents (reserved for design history; do not edit during routine chores).

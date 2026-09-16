@@ -28,6 +28,8 @@ To keep the application fast, lightweight, and reliable for all players, this pr
 5. **Strict Documentation Boundaries**:
    - **`README.md`**: Public overview and front door for GitHub visitors.
    - **`index.html` (Changelog Tab)**: Player-facing release notes explaining gameplay improvements.
+   - **`CONTRIBUTING.md`**: Contribution guidelines, pull request checklist, and non-negotiable architectural invariants.
+   - **`CODE_OF_CONDUCT.md`**: Community standards, pledge, and enforcement procedures.
    - **`DEVELOPMENT.md`**: Technical architecture, maintainer guidance, and engineering invariants.
    - **`SECURITY.md`**: Security policy, server-enforced architecture details, and vulnerability reporting procedures.
    - **`docs/`**: Long-term architecture specifications and design records (strictly reserved; do not modify in routine PRs).
@@ -77,10 +79,21 @@ npm run test:rules
    - [ ] All 76 unit/failure tests pass (`npm test`).
    - [ ] All 35 security rules tests pass (`npm run test:rules`) if `firestore.rules` was modified.
    - [ ] No `.md` files in `docs/` modified.
+   - [ ] Adhere to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+---
+
+## Code of Conduct
+
+We are committed to providing a welcoming, diverse, and harassment-free community. All contributors and participants are required to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to [adithyams64203@gmail.com](mailto:adithyams64203@gmail.com).
 
 ---
 
 ## Reporting Issues
 
-- **Bug Reports**: Please include browser name/version, steps to reproduce, console errors (F12), and whether you were running locally or via Firebase.
+- **Bug Reports**: Please use our [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md) and include browser name/version, steps to reproduce, and console errors (F12).
+- **Feature Requests**: Please use our [Feature Request template](.github/ISSUE_TEMPLATE/feature_request.md) to propose enhancements aligned with the tracker's zero-build-step philosophy.
 - **Security Vulnerabilities**: Do **not** open public issues. Follow our private disclosure policy in [SECURITY.md](SECURITY.md).
+

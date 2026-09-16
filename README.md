@@ -109,8 +109,11 @@ valorant-challenge-tracker/
 ├── firestore.rules         # Server-enforced Firestore security rules
 ├── firestore.indexes.json  # Cloud Firestore composite indexes
 ├── firebase.json           # Firebase Hosting & Emulator configuration
+├── CONTRIBUTING.md         # Contribution guidelines & architectural invariants
+├── CODE_OF_CONDUCT.md      # Contributor Covenant Code of Conduct
 ├── DEVELOPMENT.md          # Maintainer guidance and architectural invariants
 ├── SECURITY.md             # Security policy and server-side rules specification
+├── LICENSE                 # MIT License & Riot Games IP notice
 └── package.json            # Tooling and test runner configuration
 ```
 
@@ -122,9 +125,19 @@ To keep information organized and prevent redundant or conflicting documentation
 
 - **`README.md`**: Front door and public presentation for GitHub visitors, users, and prospective contributors.
 - **`index.html` (Changelog Tab)**: Player-facing release notes detailing feature updates, UX polish, and fixes in plain language.
+- **`CONTRIBUTING.md`**: Contribution guidelines, pull request checklist, and non-negotiable architectural invariants.
+- **`CODE_OF_CONDUCT.md`**: Community standards, pledge, and enforcement procedures.
 - **`DEVELOPMENT.md`**: Technical maintainer notes, architectural invariants, state machines, and testing guidelines.
 - **`SECURITY.md`**: Security architecture specification, server-side rule invariants, and private vulnerability disclosure policies.
 - **`docs/`**: Long-term architecture specifications, RFCs, and phase design records (strictly reserved; not modified during chore updates).
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting an issue or opening a pull request. It outlines our architectural invariants (zero build step, parse-time script order, local-first persistence) and verification workflow.
+
+All contributors and community participants are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 

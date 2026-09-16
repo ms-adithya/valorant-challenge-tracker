@@ -6,6 +6,9 @@ labels: bug
 assignees: ''
 ---
 
+> [!IMPORTANT]
+> If you have discovered a potential security vulnerability (e.g. authentication bypass, security rules violation, data leakage), do **not** submit a public issue. Please follow our private disclosure policy in [SECURITY.md](https://github.com/ms-adithya/valorant-challenge-tracker/blob/main/SECURITY.md).
+
 ## Describe the Bug
 A clear and concise description of what the bug is.
 
@@ -35,3 +38,4 @@ A clear and concise description of what you expected to happen.
 
 ## Additional Information
 Add any other context about the problem here (e.g., number of matches, whether cloud sync was active).
+
