@@ -1241,4 +1241,143 @@ test("cloud sync batch: deleting challenge with multiple matches deletes all doc
   }
 });
 
+test("cloud sync batching A: 300 distributed match updates across 300 challenges never exceed 400 operations per batch", async () => {
+  const cloudSync = require("../js/cloud/cloud-sync.js");
+  const origWindow = global.window;
+  const origData = global.data;
+  const origActive = global.activeChallenges;
+  const origArchives = global.archives;
+
+  const batches = [];
+  let currentBatchOps = [];
+
+  const mockBatch = {
+    delete: (ref) => currentBatchOps.push({ type: "delete", ref }),
+    update: (ref, data) => currentBatchOps.push({ type: "update", ref, data }),
+    set: (ref, data, opts) => currentBatchOps.push({ type: "set", ref, data, opts }),
+    commit: async () => {
+      batches.push([...currentBatchOps]);
+      currentBatchOps = [];
+    },
+  };
+
+  const mockFx = {
+    writeBatch: () => mockBatch,
+    doc: (db, ...parts) => parts.join("/"),
+    serverTimestamp: () => "MOCK_SERVER_TIMESTAMP",
+  };
+
+  global.window = {
+    VCT: { fx: mockFx, db: {}, uid: "alice" },
+    buildSnapshot,
+    diffSnapshots,
+  };
+
+  try {
+    // 300 challenges, each with 1 match
+    const challenges = [];
+    for (let i = 1; i <= 300; i++) {
+      challenges.push({
+        id: `c_${i}`,
+        name: `Challenge ${i}`,
+        target: 10,
+        startRank: "Gold 1",
+        startRR: 50,
+        matches: [
+          { matchId: `m_${i}`, no: 1, agent: "Jett", map: "Ascent", result: "Win", myScore: 13, enemyScore: 5, rounds: 18 },
+        ],
+      });
+    }
+
+    const initialSnap = buildSnapshot({ data: challenges[0], activeChallenges: challenges, archives: [] });
+    cloudSync._setHydrated(true);
+    cloudSync._setLastSyncedSnapshot(initialSnap);
+    cloudSync._setTombstones({});
+
+    // Update every match's score
+    const updatedChallenges = challenges.map((c) => ({
+      ...c,
+      matches: [{ ...c.matches[0], myScore: 14, rounds: 19 }],
+    }));
+
+    global.data = updatedChallenges[0];
+    global.activeChallenges = updatedChallenges;
+    global.archives = [];
+
+    await cloudSync.pushChanges();
+
+    // Verify multiple batches were committed
+    assert.ok(batches.length >= 2, `Expected at least 2 batches for 300 distributed updates, got ${batches.length}`);
+
+    // Verify that every single batch committed strictly <= 400 actual Firestore operations
+    for (let i = 0; i < batches.length; i++) {
+      const batchOpsCount = batches[i].length;
+      assert.ok(
+        batchOpsCount <= 400,
+        `Batch #${i + 1} exceeded 400-operation ceiling: contained ${batchOpsCount} operations`
+      );
+    }
+  } finally {
+    global.window = origWindow;
+    global.data = origData;
+    global.activeChallenges = origActive;
+    global.archives = origArchives;
+    cloudSync._setHydrated(false);
+  }
+});
+
+test("cloud sync batching B: 300 match updates across 3 parent challenges accurately projects operations without overcounting", () => {
+  const { countProjectedOperations, chunkChangesByOperations } = require("../js/cloud/cloud-sync.js");
+
+  // 300 match updates for only 3 challenges (100 matches per challenge)
+  const changes = [];
+  for (let i = 1; i <= 300; i++) {
+    const parentId = `c_${(i % 3) + 1}`;
+    changes.push({
+      action: "update",
+      kind: "match",
+      key: `${parentId}/m_${i}`,
+      doc: { myScore: 13 },
+    });
+  }
+
+  // 300 match updates + 3 unique parent touches = 303 operations
+  const projected = countProjectedOperations(changes, new Set(), {});
+  assert.strictEqual(projected, 303, `Expected 303 operations (300 match ops + 3 parent touches), got ${projected}`);
+
+  // Since 303 <= 400, it should fit in a single chunk
+  const chunks = chunkChangesByOperations(changes, new Set(), {}, 400);
+  assert.strictEqual(chunks.length, 1, `Expected 1 chunk for 303 operations, got ${chunks.length}`);
+});
+
+test("cloud sync batching C: challenge deletion with child match deletes projects exactly 4 operations", () => {
+  const { countProjectedOperations } = require("../js/cloud/cloud-sync.js");
+
+  const changes = [
+    { action: "delete", kind: "challenge", key: "c_1" },
+    { action: "delete", kind: "match", key: "c_1/m_1" },
+    { action: "delete", kind: "match", key: "c_1/m_2" },
+  ];
+  const deletedChallenges = new Set(["c_1"]);
+
+  // 3 document deletes + 0 parent touches (guarded by deletedChallenges) + 1 tombstone write = 4 operations
+  const projected = countProjectedOperations(changes, deletedChallenges, {});
+  assert.strictEqual(projected, 4, `Expected exactly 4 operations (3 deletes + 1 tombstone doc), got ${projected}`);
+});
+
+test("cloud sync batching D: deletions plus ordinary match updates count tombstone document only once", () => {
+  const { countProjectedOperations } = require("../js/cloud/cloud-sync.js");
+
+  const changes = [
+    { action: "delete", kind: "match", key: "c_1/m_1" },
+    { action: "delete", kind: "match", key: "c_1/m_2" },
+    { action: "update", kind: "match", key: "c_1/m_3", doc: { myScore: 13 } },
+  ];
+
+  // 2 deletes + 1 update + 1 parent touch for c_1 + 1 tombstone document write = 5 operations
+  const projected = countProjectedOperations(changes, new Set(), {});
+  assert.strictEqual(projected, 5, `Expected 5 operations (2 deletes + 1 update + 1 parent touch + 1 tombstone), got ${projected}`);
+});
+
+
 
