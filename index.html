@@ -200,11 +200,28 @@
       <h2>Changelog</h2>
       <p class="muted">Patch notes, fixes and major feature updates for Valorant Challenge Tracker.</p>
     </div>
-    <span class="version-pill">Current v10.3</span>
+    <span class="version-pill">Current v10.4</span>
   </div>
 
   <div class="update-feed">
     <details class="update-card major" open>
+      <summary><span><strong>v10.4 — Cloud sync &amp; data resilience</strong><small>Major update · Real-time sync, archive safety &amp; numbering reconciliation</small></span><span class="update-toggle">⌄</span></summary>
+      <div class="update-body">
+        <h4>Added</h4>
+        <ul>
+          <li><strong>Real-time cloud sync:</strong> Signed-in players now enjoy automatic background syncing across multiple browser tabs and devices with instant updates.</li>
+          <li><strong>ID-based archive protection:</strong> Archiving, restoring, and deleting challenges now relies on unique identifiers, safeguarding your challenge history and match data against accidental overwrites.</li>
+          <li><strong>Smart match reconciliation:</strong> Duplicate match numbers are automatically detected and neatly renumbered into available gaps, ensuring your career match sequence remains unbroken.</li>
+        </ul>
+        <h4>Improved</h4>
+        <ul>
+          <li><strong>Offline notice dismissibility:</strong> Storage notifications and offline alerts can now be dismissed cleanly via click or backdrop without interrupting your match logging flow.</li>
+          <li><strong>Data resilience:</strong> Deleted challenges and matches are tracked with durable tombstones, preventing old or cached data from reappearing across concurrent sessions.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="update-card major">
       <summary><span><strong>v10.3 — Web hosting &amp; cloud foundation</strong><small>Major update · Web launch, speed &amp; offline reliability</small></span><span class="update-toggle">⌄</span></summary>
       <div class="update-body">
         <h4>Added</h4>
