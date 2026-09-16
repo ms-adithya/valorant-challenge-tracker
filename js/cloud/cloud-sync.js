@@ -170,7 +170,6 @@
       );
 
       const { fx, db, uid } = VCT;
-      for (const part of chunkFn(changes, 400)) {
       for (const part of chunkChangesByOperations(changes, deletedChallenges, tombstones, 400)) {
         const batch = fx.writeBatch(db);
         const challengesToTouch = new Set();
