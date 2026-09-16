@@ -2,7 +2,7 @@
 
 [![Live App](https://img.shields.io/badge/Live_App-valorant--challenge--tracker.web.app-00f59b?style=flat&logo=firebase)](https://valorant-challenge-tracker.web.app)
 [![Tests](https://img.shields.io/badge/Tests-76%20unit%20%7C%2035%20rules-brightgreen?style=flat&logo=node.js)](tests/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A high-performance, local-first web application designed for competitive VALORANT players to log matches, follow rank and RR progression, analyze agent/map performance, and celebrate ranked climb milestones. Built with zero runtime dependencies, robust offline support, and seamless real-time cloud synchronization.
 
@@ -135,8 +135,10 @@ User-facing release notes are integrated directly into the application in the **
 ---
 
 ## License
+ 
+The original source code and documentation of this project are open-source under the [MIT License](LICENSE).
 
-This project is open-source under the [MIT License](https://opensource.org/licenses/MIT).
+VALORANT, Riot Games, and all associated properties, names, rank iconography, and game assets are trademarks or registered trademarks of Riot Games, Inc. and are not covered by the MIT license. See the [LICENSE](LICENSE) file for full terms and third-party intellectual property notices.
 
 ---
 
