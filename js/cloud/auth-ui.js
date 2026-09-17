@@ -20,7 +20,21 @@
     
     // If Firebase/Auth is unavailable: render "Working offline"
     if (!VCT || !VCT.auth) {
-      host.innerHTML = `<p class="auth-offline">Working offline</p>`;
+      host.innerHTML = `
+        <div class="auth-card-widget auth-offline-card">
+          <div class="auth-widget-header">
+            <div class="auth-avatar-badge offline">
+              <span class="auth-avatar-icon">☁</span>
+            </div>
+            <div class="auth-user-meta">
+              <div class="auth-title-line">
+                <strong class="auth-display-name">Storage Status</strong>
+                <span class="auth-pill pill-muted">Offline</span>
+              </div>
+              <p class="auth-offline">Working offline</p>
+            </div>
+          </div>
+        </div>`;
       return;
     }
 
@@ -29,33 +43,100 @@
     // If Auth is initialized with no user: render signed-out state
     if (!user) {
       host.innerHTML = `
-        <button class="ghost" type="button" id="openSignUpBtn">Create an account</button>
-        <button class="linklike" type="button" id="openSignInBtn">I already have one</button>`;
+        <div class="auth-card-widget">
+          <div class="auth-widget-header" id="authWidgetHeader" title="Click to sign in">
+            <div class="auth-avatar-badge guest">
+              <span class="auth-avatar-icon">👤</span>
+            </div>
+            <div class="auth-user-meta">
+              <div class="auth-title-line">
+                <strong class="auth-display-name">Player Profile</strong>
+                <span class="auth-pill pill-muted">Signed out</span>
+              </div>
+              <p class="auth-anon">Sign in to sync your match history</p>
+            </div>
+          </div>
+          <div class="auth-widget-actions">
+            <button class="auth-btn-primary" type="button" id="openSignUpBtn">
+              <span class="auth-btn-icon">⚡</span>
+              <span>Create an account</span>
+            </button>
+            <button class="auth-btn-secondary" type="button" id="openSignInBtn">
+              <span>Sign In</span>
+              <span class="auth-btn-hint">· I already have one</span>
+            </button>
+          </div>
+        </div>`;
       const signUpBtn = document.getElementById("openSignUpBtn");
       const signInBtn = document.getElementById("openSignInBtn");
+      const header = document.getElementById("authWidgetHeader");
       if (signUpBtn) signUpBtn.onclick = () => openAuthModal("signup");
       if (signInBtn) signInBtn.onclick = () => openAuthModal("signin");
+      if (header) header.onclick = () => openAuthModal("signin");
       return;
     }
 
     // Anonymous user
     if (user.isAnonymous) {
       host.innerHTML = `
-        <p class="auth-anon">Your data is saved on this device only.</p>
-        <button class="ghost" type="button" id="openSignUpBtn">Create an account</button>
-        <button class="linklike" type="button" id="openSignInBtn">I already have one</button>`;
+        <div class="auth-card-widget">
+          <div class="auth-widget-header" id="authWidgetHeader" title="Guest session - click to sign in">
+            <div class="auth-avatar-badge guest">
+              <span class="auth-avatar-icon">👤</span>
+            </div>
+            <div class="auth-user-meta">
+              <div class="auth-title-line">
+                <strong class="auth-display-name">Guest Player</strong>
+                <span class="auth-pill pill-amber">● Local</span>
+              </div>
+              <p class="auth-anon">Your data is saved on this device only.</p>
+            </div>
+          </div>
+          <div class="auth-widget-actions">
+            <button class="auth-btn-primary" type="button" id="openSignUpBtn">
+              <span class="auth-btn-icon">⚡</span>
+              <span>Create an account</span>
+            </button>
+            <button class="auth-btn-secondary" type="button" id="openSignInBtn">
+              <span>Sign In</span>
+              <span class="auth-btn-hint">· I already have one</span>
+            </button>
+          </div>
+        </div>`;
       const signUpBtn = document.getElementById("openSignUpBtn");
       const signInBtn = document.getElementById("openSignInBtn");
+      const header = document.getElementById("authWidgetHeader");
       if (signUpBtn) signUpBtn.onclick = () => openAuthModal("signup");
       if (signInBtn) signInBtn.onclick = () => openAuthModal("signin");
+      if (header) header.onclick = () => openAuthModal("signin");
       return;
     }
 
     // Authenticated named user
     const label = user.displayName || user.email || "Signed in";
+    const sublabel = user.displayName && user.email ? user.email : "Cloud Sync Active";
+    const initial = (user.displayName || user.email || "P").charAt(0).toUpperCase();
     host.innerHTML = `
-      <p class="auth-user">${escapeHtml(label)}</p>
-      <button class="linklike" type="button" id="signOutBtn">Sign out</button>`;
+      <div class="auth-card-widget authenticated">
+        <div class="auth-widget-header">
+          <div class="auth-avatar-badge user">
+            <span class="auth-avatar-initial">${escapeHtml(initial)}</span>
+          </div>
+          <div class="auth-user-meta">
+            <div class="auth-title-line">
+              <strong class="auth-display-name" title="${escapeHtml(label)}">${escapeHtml(label)}</strong>
+              <span class="auth-pill pill-green">● Synced</span>
+            </div>
+            <p class="auth-user" title="${escapeHtml(sublabel)}">${escapeHtml(sublabel)}</p>
+          </div>
+        </div>
+        <div class="auth-widget-actions">
+          <button class="auth-btn-secondary auth-btn-signout" type="button" id="signOutBtn">
+            <span class="auth-btn-icon">↩</span>
+            <span>Sign out</span>
+          </button>
+        </div>
+      </div>`;
     const signOutBtn = document.getElementById("signOutBtn");
     if (signOutBtn) signOutBtn.onclick = signOut;
   }
