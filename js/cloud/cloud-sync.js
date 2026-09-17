@@ -260,7 +260,18 @@
     const { fx, db } = VCT;
     const rootDoc = userRoot(uid);
     if (rootDoc) {
-      await fx.setDoc(rootDoc, { schemaVersion: 1, updatedAt: fx.serverTimestamp() }, { merge: true });
+      const user = VCT.auth ? VCT.auth.currentUser : null;
+      try {
+        await fx.setDoc(rootDoc, {
+          schemaVersion: 1,
+          displayName: (user && user.displayName) || null,
+          email: (user && user.email) || null,
+          photoURL: (user && user.photoURL) || null,
+          updatedAt: fx.serverTimestamp(),
+        }, { merge: true });
+      } catch (err) {
+        console.warn("VCT: profile document update failed", err);
+      }
     }
 
     // Subscribe to durable tombstones
