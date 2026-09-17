@@ -3,6 +3,7 @@
 
 /* Sidebar Auth Panel */
 .auth-panel {
+  padding: 14px 8px;
   padding: 10px 4px 6px;
   border-top: 1px solid var(--line);
   margin-top: auto;
@@ -11,6 +12,7 @@
 .auth-state {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 /* Tactical Player Profile Card */
@@ -122,7 +124,6 @@
 }
 
 .auth-offline,
-.auth-anon,
 .auth-user {
   margin: 2px 0 0;
   font-size: 10px;
@@ -133,7 +134,16 @@
   text-overflow: ellipsis;
 }
 
+.auth-anon {
+  margin: 3px 0 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: normal;
+}
+
 .auth-user {
+  color: var(--text);
   color: #b0beca;
 }
 
@@ -187,6 +197,7 @@
   color: #c0cdd8;
   font-size: 11px;
   font-weight: 600;
+  word-break: break-word;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -245,6 +256,8 @@
   cursor: pointer;
   padding: 0;
   text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   text-decoration: none;
   transition: color 0.15s ease;
 }
