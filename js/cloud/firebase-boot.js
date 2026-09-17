@@ -76,6 +76,7 @@ try {
       return;
     }
     const first = VCT.uid === null;
+    const prevUid = VCT.uid;
     VCT.uid = user.uid;
     VCT.isAnonymous = user.isAnonymous;
     if (first) {
@@ -87,6 +88,11 @@ try {
           console.error("VCT: onReady callback error", cbErr);
         }
       }
+    } else if (prevUid && prevUid !== user.uid) {
+      const cloud = VCT.cloud || (window.VCT && window.VCT.cloud);
+      if (cloud && typeof cloud.start === "function") {
+        cloud.start(user.uid);
+      }
     }
     window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user } }));
   });
@@ -94,8 +100,15 @@ try {
   if (typeof onIdTokenChanged === "function") {
     onIdTokenChanged(auth, (user) => {
       if (user) {
+        const prevUid = VCT.uid;
         VCT.uid = user.uid;
         VCT.isAnonymous = user.isAnonymous;
+        if (prevUid && prevUid !== user.uid) {
+          const cloud = VCT.cloud || (window.VCT && window.VCT.cloud);
+          if (cloud && typeof cloud.start === "function") {
+            cloud.start(user.uid);
+          }
+        }
         window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user } }));
       }
     });

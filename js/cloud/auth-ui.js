@@ -1,7 +1,7 @@
 // Account panel and sign-in modal shell. Classic script; Firebase auth functions
 // arrive via window.VCT.ax (set by firebase-boot.js).
 (function (root) {
-  let authMode = "signin";
+  let authMode = "signup";
 
   function escapeHtml(str) {
     if (typeof str !== "string") return "";
@@ -250,6 +250,12 @@
     })) return;
 
     const VCT = (typeof window !== "undefined" && window.VCT) || (root && root.VCT) || null;
+    if (VCT && VCT.cloud && typeof VCT.cloud.pushChanges === "function") {
+      try { await VCT.cloud.pushChanges(); } catch (_) {}
+    }
+    if (VCT && VCT.cloud && typeof VCT.cloud.stop === "function") {
+      VCT.cloud.stop();
+    }
     if (VCT && VCT.ax && typeof VCT.ax.signOut === "function" && VCT.auth) {
       await VCT.ax.signOut(VCT.auth);
     }
@@ -323,6 +329,10 @@
       vct.uid = user.uid;
       vct.isAnonymous = Boolean(user.isAnonymous);
     }
+    const cloud = (vct && vct.cloud) || (typeof window !== "undefined" && window.VCT && window.VCT.cloud);
+    if (cloud && typeof cloud.start === "function" && user && user.uid) {
+      cloud.start(user.uid);
+    }
     if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
       try {
         const evt = typeof CustomEvent !== "undefined"
@@ -386,6 +396,17 @@
     const { auth, ax } = vct;
     const provider = new ax.GoogleAuthProvider();
     const current = auth.currentUser;
+
+    if (authMode === "signin") {
+      if (current && current.isAnonymous) {
+        await offerMerge(() => ax.signInWithPopup(auth, provider));
+        notifyAuthSuccess(auth.currentUser);
+        return;
+      }
+      await ax.signInWithPopup(auth, provider);
+      notifyAuthSuccess(auth.currentUser);
+      return;
+    }
 
     if (current && current.isAnonymous) {
       try {

@@ -8,6 +8,9 @@
   let tombstones = {};
   let lastRawEntries = null;
   let lastRawByChallenge = null;
+  let activeUid = null;
+  let unsubTombstones = null;
+  let unsubChallenges = null;
 
   function userRoot(uid) {
     const vct = typeof window !== "undefined" ? window.VCT : null;
@@ -256,7 +259,19 @@
 
   async function start(uid) {
     const VCT = typeof window !== "undefined" ? window.VCT : null;
-    if (!VCT || !VCT.fx || !VCT.db) return;
+    if (!VCT || !VCT.fx || !VCT.db || !uid) return;
+    if (activeUid === uid && unsubChallenges) return;
+
+    if (unsubTombstones) { try { unsubTombstones(); } catch (_) {} unsubTombstones = null; }
+    if (unsubChallenges) { try { unsubChallenges(); } catch (_) {} unsubChallenges = null; }
+
+    activeUid = uid;
+    hydrated = false;
+    lastRawEntries = null;
+    lastRawByChallenge = null;
+    tombstones = {};
+    lastSyncedSnapshot = { challenges: {}, matches: {} };
+
     const { fx, db } = VCT;
     const rootDoc = userRoot(uid);
     if (rootDoc) {
@@ -287,7 +302,7 @@
     }
 
     // Subscribe to durable tombstones for subsequent out-of-band updates
-    fx.onSnapshot(tombstonesRef, (snap) => {
+    unsubTombstones = fx.onSnapshot(tombstonesRef, (snap) => {
       if (snap && snap.exists()) {
         const previous = tombstones || {};
         const prevKeys = new Set(Object.keys(previous));
@@ -309,7 +324,7 @@
 
     let latestSnapshotSeq = 0;
     const challengesRef = fx.collection(db, "users", uid, "challenges");
-    fx.onSnapshot(challengesRef, async (snap) => {
+    unsubChallenges = fx.onSnapshot(challengesRef, async (snap) => {
       const seq = ++latestSnapshotSeq;
       lastRawEntries = snap.docs.map((d) => ({ id: d.id, doc: d.data() }));
       const entries = lastRawEntries.filter((entry) => !tombstones["c_" + entry.id]);
@@ -327,10 +342,27 @@
     }, (err) => console.error("VCT: challenge subscription failed", err));
   }
 
+  function stop() {
+    if (unsubTombstones) { try { unsubTombstones(); } catch (_) {} unsubTombstones = null; }
+    if (unsubChallenges) { try { unsubChallenges(); } catch (_) {} unsubChallenges = null; }
+    activeUid = null;
+    hydrated = false;
+    lastRawEntries = null;
+    lastRawByChallenge = null;
+    tombstones = {};
+    lastSyncedSnapshot = { challenges: {}, matches: {} };
+  }
+
   function rehydrate(entries, byChallenge) {
+    const vct = typeof window !== "undefined" ? window.VCT : (typeof root !== "undefined" ? root.VCT : null);
+    const pending = vct && vct.pendingMerge;
+    const hasPendingMerge = pending && !pending.applied &&
+      ((Array.isArray(pending.activeChallenges) && pending.activeChallenges.length > 0) ||
+       (Array.isArray(pending.archives) && pending.archives.length > 0));
+
     // Nothing on the server yet: keep whatever localStorage gave us and let
-    // migration (Task 7) push it up. Do NOT blank the app.
-    if (!entries.length && !hydrated) { hydrated = true; return; }
+    // migration (Task 7) push it up. Do NOT blank the app unless there's a pending merge.
+    if (!entries.length && !hydrated && !hasPendingMerge) { hydrated = true; return; }
 
     const applyDocs = (typeof window !== "undefined" && window.applyDocuments) || (typeof window !== "undefined" && window.VCTSnapshotModel && window.VCTSnapshotModel.applyDocuments);
     const buildSnap = (typeof window !== "undefined" && window.buildSnapshot) || (typeof window !== "undefined" && window.VCTSnapshotModel && window.VCTSnapshotModel.buildSnapshot);
@@ -384,8 +416,6 @@
 
     // A merge staged during sign-in: append the previous device's challenges
     // to the account that was just signed into, with fresh IDs and in-memory rollback safety.
-    const vct = typeof window !== "undefined" ? window.VCT : (typeof root !== "undefined" ? root.VCT : null);
-    const pending = vct && vct.pendingMerge;
     if (pending && !pending.applied) {
       pending.applied = true; // One-shot guard
 
@@ -472,6 +502,7 @@
   const api = {
     pushChanges,
     start,
+    stop,
     rehydrate,
     reconcileMatchNumbers,
     get lastSyncedSnapshot() { return lastSyncedSnapshot; },

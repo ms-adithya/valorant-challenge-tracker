@@ -308,3 +308,36 @@ test("regression check: persist() and local-first cloud-sync guarantees remain i
     global.archives = origArchives;
   }
 });
+
+// ---------------------------------------------------------------------------
+// 7. Google Sign-In Single Popup and Cloud Sync Activation
+// ---------------------------------------------------------------------------
+
+test("Google Auth: in signin mode, calls signInWithPopup directly once and starts cloud sync", async () => {
+  const anonUser = { uid: "anon_single_popup", isAnonymous: true };
+  const { vct, calls } = createMockGoogleAuthEnvironment(anonUser);
+
+  let cloudStartedUid = null;
+  vct.cloud = {
+    start: (uid) => { cloudStartedUid = uid; },
+  };
+
+  global.window = {
+    VCT: vct,
+    document: {
+      getElementById: () => null,
+    },
+  };
+
+  const authUi = require("../js/cloud/auth-ui.js");
+  authUi.openAuthModal("signin");
+
+  await authUi.handleGoogleAuth();
+
+  // Must call signInWithPopup directly (1 popup only) and NEVER call linkWithPopup
+  assert.strictEqual(calls.signInWithPopup.length, 1);
+  assert.strictEqual(calls.linkWithPopup.length, 0);
+  assert.strictEqual(vct.auth.currentUser.uid, "google_target_uid");
+  assert.strictEqual(cloudStartedUid, "google_target_uid");
+});
+
