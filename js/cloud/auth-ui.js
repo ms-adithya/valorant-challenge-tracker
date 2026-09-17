@@ -140,6 +140,100 @@
     }
   }
 
+  const AUTH_MESSAGES = {
+    "auth/invalid-email": "That email address does not look right.",
+    "auth/missing-password": "Enter your password.",
+    "auth/weak-password": "Choose a password of at least 6 characters.",
+    "auth/email-already-in-use": "An account already uses that email. Try signing in instead.",
+    "auth/invalid-credential": "That email and password do not match an account.",
+    "auth/too-many-requests": "Too many attempts. Wait a minute and try again.",
+    "auth/network-request-failed": "No connection. Your data is still saved on this device.",
+  };
+
+  function authMessage(err) {
+    return AUTH_MESSAGES[err && err.code] ||
+      "Something went wrong signing in. Your local data is untouched.";
+  }
+
+  // Shared by email (Task 10) and later Google (Task 11). `signInFn` performs provider sign-in.
+  async function offerMerge(signInFn) {
+    const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
+    const getCanonicalActive = () => (typeof window !== "undefined" && window.activeChallenges) || (typeof activeChallenges !== "undefined" ? activeChallenges : []);
+    const getCanonicalArchives = () => (typeof window !== "undefined" && window.archives) || (typeof archives !== "undefined" ? archives : []);
+
+    const rawActive = getCanonicalActive();
+    const rawArchives = getCanonicalArchives();
+    const localCount = (rawActive ? rawActive.length : 0) + (rawArchives ? rawArchives.length : 0);
+
+    let keepLocal = false;
+    if (localCount > 0) {
+      const confirmFn = typeof window !== "undefined" && typeof window.appConfirm === "function" ? window.appConfirm : async () => true;
+      keepLocal = await confirmFn({
+        title: "Keep this device's challenges?",
+        message: `That account already exists. You have ${localCount} challenge${localCount === 1 ? "" : "s"} saved on this device. Add them to that account, or sign in and leave them behind?`,
+        confirmText: "Add them to the account",
+        cancelText: "Leave them behind",
+        kicker: "ACCOUNT",
+      });
+    }
+
+    // If confirmed: stage complete challenge objects including nested matches
+    // If cancelled ("Leave them behind"): do NOT populate pendingMerge (stages nothing)
+    if (keepLocal && vct) {
+      vct.pendingMerge = {
+        activeChallenges: JSON.parse(JSON.stringify(rawActive || [])),
+        archives: JSON.parse(JSON.stringify(rawArchives || [])),
+        applied: false,
+      };
+    }
+
+    // Transactional staging: if sign-in fails, immediately clear pendingMerge
+    try {
+      await signInFn();
+    } catch (err) {
+      if (vct) vct.pendingMerge = null;
+      throw err;
+    }
+  }
+
+  async function handleEmailAuth(email, password, mode) {
+    const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
+    if (!vct || !vct.auth || !vct.ax) {
+      throw new Error("Authentication is currently unavailable.");
+    }
+    const { auth, ax } = vct;
+    const current = auth.currentUser;
+
+    if (mode === "signup") {
+      const credential = ax.EmailAuthProvider.credential(email, password);
+      // Pathway A: Link rather than create: preserves the anonymous uid and every
+      // document already written under it without needing a merge.
+      if (current && current.isAnonymous) {
+        try {
+          await ax.linkWithCredential(current, credential);
+          return;
+        } catch (err) {
+          // Pathway B: Credential collision
+          if (err.code === "auth/credential-already-in-use" ||
+              err.code === "auth/email-already-in-use") {
+            await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
+            return;
+          }
+          throw err;
+        }
+      }
+      await ax.createUserWithEmailAndPassword(auth, email, password);
+      return;
+    }
+
+    // Pathway C: Signing in as existing user from an anonymous session
+    if (current && current.isAnonymous) {
+      await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
+      return;
+    }
+    await ax.signInWithEmailAndPassword(auth, email, password);
+  }
+
   function wireListeners() {
     const closeBtn = document.getElementById("closeAuthModal");
     if (closeBtn) closeBtn.onclick = closeAuthModal;
@@ -167,14 +261,42 @@
       }
     });
 
-    // Inert stubs for Task 9: prevents default submission/navigation without invoking remote auth APIs
+    // Active submit handler for Task 10
     const authForm = document.getElementById("authForm");
     if (authForm) {
-      authForm.addEventListener("submit", (e) => {
+      authForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        clearAuthError();
+        const btn = document.getElementById("authSubmitBtn");
+        const originalText = btn ? btn.textContent : "Submit";
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Working…";
+        }
+        try {
+          const emailInput = document.getElementById("authEmail");
+          const passwordInput = document.getElementById("authPassword");
+          const email = emailInput ? emailInput.value.trim() : "";
+          const password = passwordInput ? passwordInput.value : "";
+          await handleEmailAuth(email, password, authMode);
+          closeAuthModal();
+          const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
+          if (showToastFn) {
+            showToastFn(authMode === "signup" ? "Account created." : "Signed in.");
+          }
+        } catch (err) {
+          console.error("VCT: auth failed", err);
+          showAuthError(authMessage(err));
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+          }
+        }
       });
     }
 
+    // Google remains an inert stub for Task 10 (deferred to Task 11)
     const googleBtn = document.getElementById("googleSignInBtn");
     if (googleBtn) {
       googleBtn.addEventListener("click", (e) => {
@@ -207,6 +329,10 @@
     clearAuthError,
     getAuthMode: () => authMode,
     signOut,
+    handleEmailAuth,
+    offerMerge,
+    authMessage,
+    AUTH_MESSAGES,
   };
 
   if (typeof window !== "undefined") {
