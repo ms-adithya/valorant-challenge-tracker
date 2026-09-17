@@ -707,6 +707,91 @@ test("delete invariant: tombstone merge maintains existing keys while appending 
   assert.strictEqual(snap.data()?.c_c_newly_deleted, "2026-09-16T00:00:00Z");
 });
 
+test("profile root document: owner can create and read their root document", async () => {
+  const alice = asAlice();
+  const rootRef = alice.doc("users/alice");
+  await assertSucceeds(rootRef.set({
+    schemaVersion: 1,
+    displayName: "Alice",
+    email: "alice@example.com",
+    photoURL: "https://example.com/alice.png",
+  }));
+  const snap = await assertSucceeds(rootRef.get());
+  assert.strictEqual(snap.data()?.displayName, "Alice");
+});
+
+test("profile root document: anonymous fields can be null", async () => {
+  const alice = asAlice();
+  const rootRef = alice.doc("users/alice");
+  await assertSucceeds(rootRef.set({
+    schemaVersion: 1,
+    displayName: null,
+    email: null,
+    photoURL: null,
+  }));
+});
+
+test("profile root document: non-owner and unauthenticated users cannot read or write root document", async () => {
+  const alice = asAlice();
+  const bob = asBob();
+  const anon = asAnon();
+  const rootRef = alice.doc("users/alice");
+  await assertSucceeds(rootRef.set({ schemaVersion: 1, displayName: "Alice" }));
+
+  await assertFails(bob.doc("users/alice").get());
+  await assertFails(bob.doc("users/alice").set({ schemaVersion: 1, displayName: "Hacked" }));
+  await assertFails(anon.doc("users/alice").get());
+  await assertFails(anon.doc("users/alice").set({ schemaVersion: 1, displayName: "Hacked" }));
+});
+
+test("profile root document: client writes touching riot field are rejected", async () => {
+  const alice = asAlice();
+  const rootRef = alice.doc("users/alice");
+
+  // Create with riot field is rejected
+  await assertFails(rootRef.set({
+    schemaVersion: 1,
+    displayName: "Alice",
+    riot: { puuid: "fake-puuid", gameName: "Alice", tagLine: "NA1" },
+  }));
+
+  // Create valid root doc
+  await assertSucceeds(rootRef.set({
+    schemaVersion: 1,
+    displayName: "Alice",
+  }));
+
+  // Update touching riot field is rejected
+  await assertFails(rootRef.update({
+    riot: { puuid: "fake-puuid" },
+  }));
+});
+
+test("delete invariant: specific match tombstone blocks match recreation while sibling match succeeds", async () => {
+  const alice = asAlice();
+  const cRef = alice.doc("users/alice/challenges/c_parent");
+  const m1Ref = alice.doc("users/alice/challenges/c_parent/matches/m1");
+  const m2Ref = alice.doc("users/alice/challenges/c_parent/matches/m2");
+  const tsRef = alice.doc("users/alice/meta/tombstones");
+
+  await assertSucceeds(cRef.set(validChallenge));
+  await assertSucceeds(m1Ref.set(validMatch));
+
+  // Delete m1 and write match-specific tombstone
+  const b = alice.batch();
+  b.delete(m1Ref);
+  b.set(tsRef, { m_c_parent_m1: "2026-09-17T00:00:00Z" }, { merge: true });
+  await assertSucceeds(b.commit());
+
+  // Stale write to tombstoned match m1 is rejected
+  await assertFails(m1Ref.set(validMatch));
+
+  // Sibling match m2 under same challenge succeeds
+  const m2 = Object.assign({}, validMatch, { no: 2 });
+  await assertSucceeds(m2Ref.set(m2));
+});
+
+
 
 
 

@@ -1,0 +1,245 @@
+/* 31-auth.css - Account panel and sign-in modal styling.
+   Part of an ordered set; see css/README.md. Load order is load-bearing. */
+
+/* Sidebar Auth Panel */
+.auth-panel {
+  padding: 14px 8px;
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+}
+
+.auth-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-offline,
+.auth-anon,
+.auth-user {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.auth-user {
+  color: var(--text);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.auth-state .ghost {
+  width: 100%;
+  font-size: 12px;
+  padding: 8px 10px;
+  text-align: center;
+  border-radius: 6px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.auth-state .ghost:hover {
+  background: #1c2630;
+  border-color: var(--line-hot);
+}
+
+.linklike {
+  background: transparent;
+  border: none;
+  color: var(--cyan);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.linklike:hover {
+  color: #8be0ec;
+}
+
+/* Auth Modal Card */
+.auth-card {
+  width: min(420px, 100%);
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+}
+
+.auth-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.auth-card header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.auth-card header .ghost {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.auth-card header .ghost:hover {
+  color: var(--text);
+}
+
+/* Error Banner */
+.auth-error {
+  background: rgba(255, 70, 85, 0.12);
+  border: 1px solid rgba(255, 70, 85, 0.35);
+  color: var(--red2);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+/* Google Sign-in Button */
+.auth-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #18222b;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.auth-google:hover {
+  background: #202d38;
+  border-color: var(--line-hot);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--line);
+}
+
+.auth-divider span {
+  padding: 0 10px;
+}
+
+/* Auth Form */
+#authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#authForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+#authForm input[type="email"],
+#authForm input[type="password"] {
+  background: #090e13;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+#authForm input[type="email"]:focus,
+#authForm input[type="password"]:focus {
+  border-color: var(--cyan);
+}
+
+#authSubmitBtn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease;
+}
+
+#authSubmitBtn:hover {
+  background: var(--red2);
+}
+
+#authSubmitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-switch {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.auth-switch .linklike {
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1000px) {
+  .auth-panel {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-card {
+    width: min(380px, 94vw);
+    padding: 18px;
+  }
+}

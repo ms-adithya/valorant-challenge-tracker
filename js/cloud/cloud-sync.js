@@ -260,7 +260,18 @@
     const { fx, db } = VCT;
     const rootDoc = userRoot(uid);
     if (rootDoc) {
-      await fx.setDoc(rootDoc, { schemaVersion: 1, updatedAt: fx.serverTimestamp() }, { merge: true });
+      const user = VCT.auth ? VCT.auth.currentUser : null;
+      try {
+        await fx.setDoc(rootDoc, {
+          schemaVersion: 1,
+          displayName: (user && user.displayName) || null,
+          email: (user && user.email) || null,
+          photoURL: (user && user.photoURL) || null,
+          updatedAt: fx.serverTimestamp(),
+        }, { merge: true });
+      } catch (err) {
+        console.warn("VCT: profile document update failed", err);
+      }
     }
 
     // Subscribe to durable tombstones
@@ -370,11 +381,98 @@
       ? render
       : (typeof window !== "undefined" && typeof window.render === "function" ? window.render : null);
     if (renderFn) renderFn();
+
+    // A merge staged during sign-in: append the previous device's challenges
+    // to the account that was just signed into, with fresh IDs and in-memory rollback safety.
+    const vct = typeof window !== "undefined" ? window.VCT : (typeof root !== "undefined" ? root.VCT : null);
+    const pending = vct && vct.pendingMerge;
+    if (pending && !pending.applied) {
+      pending.applied = true; // One-shot guard
+
+      const activeIncoming = Array.isArray(pending.activeChallenges) ? pending.activeChallenges : [];
+      const archiveIncoming = Array.isArray(pending.archives) ? pending.archives : [];
+      const totalIncoming = activeIncoming.length + archiveIncoming.length;
+
+      if (totalIncoming > 0) {
+        // Resolve canonical array references
+        const getCanonicalActive = () => (typeof window !== "undefined" && window.activeChallenges) || (typeof activeChallenges !== "undefined" ? activeChallenges : []);
+        const getCanonicalArchives = () => (typeof window !== "undefined" && window.archives) || (typeof archives !== "undefined" ? archives : []);
+
+        const targetActive = getCanonicalActive();
+        const targetArchives = getCanonicalArchives();
+
+        // 1. Snapshot pre-merge state for rollback safety
+        const preMergeActive = targetActive.slice();
+        const preMergeArchives = targetArchives.slice();
+
+        const newMatchIdFn = (typeof window !== "undefined" && window.newMatchId) ||
+          (typeof window !== "undefined" && window.VCTSnapshotModel && window.VCTSnapshotModel.newMatchId) ||
+          (() => `m_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
+        const ensureChallengeIdFn = typeof ensureChallengeId === "function" ? ensureChallengeId : (c => {
+          if (c && !c.id) c.id = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          return c;
+        });
+
+        const cloneAndRekey = (orig) => {
+          const clone = JSON.parse(JSON.stringify(orig));
+          clone.id = null;
+          ensureChallengeIdFn(clone);
+          if (Array.isArray(clone.matches)) {
+            clone.matches.forEach((m) => {
+              m.matchId = newMatchIdFn();
+            });
+          }
+          return clone;
+        };
+
+        // 2. Explicit bucket mapping using canonical references
+        const clonedActive = activeIncoming.map(cloneAndRekey);
+        const clonedArchives = archiveIncoming.map(cloneAndRekey);
+
+        const mergedActive = [...targetActive, ...clonedActive];
+        const mergedArchives = [...targetArchives, ...clonedArchives];
+
+        // Apply in-memory across both scopes
+        try { activeChallenges = mergedActive; } catch (_) {}
+        try { archives = mergedArchives; } catch (_) {}
+        if (typeof window !== "undefined") {
+          window.activeChallenges = mergedActive;
+          window.archives = mergedArchives;
+        }
+
+        // 3. Attempt persistence
+        const persistFn = typeof persist === "function" ? persist : (typeof window !== "undefined" ? window.persist : null);
+        const persisted = persistFn ? persistFn() : false;
+
+        if (persisted) {
+          // Success: clear pendingMerge
+          vct.pendingMerge = null;
+          const showToastFn = typeof showToast === "function" ? showToast : (typeof window !== "undefined" ? window.showToast : null);
+          if (showToastFn) {
+            showToastFn(`${totalIncoming} challenge${totalIncoming === 1 ? "" : "s"} added to your account.`);
+          }
+          if (renderFn) renderFn();
+        } else {
+          // Failure: rollback arrays cleanly and retain pendingMerge for retry
+          try { activeChallenges = preMergeActive; } catch (_) {}
+          try { archives = preMergeArchives; } catch (_) {}
+          if (typeof window !== "undefined") {
+            window.activeChallenges = preMergeActive;
+            window.archives = preMergeArchives;
+          }
+          pending.applied = false; // Allow safe retry without duplicate clones
+          console.error("VCT: failed to persist merged challenges; rolled back in-memory state");
+        }
+      } else {
+        vct.pendingMerge = null;
+      }
+    }
   }
 
   const api = {
     pushChanges,
     start,
+    rehydrate,
     reconcileMatchNumbers,
     get lastSyncedSnapshot() { return lastSyncedSnapshot; },
     get hydrated() { return hydrated; },

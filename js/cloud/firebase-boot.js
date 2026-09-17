@@ -26,6 +26,7 @@ window.VCT = VCT;
 try {
   const firebaseApp = await import(`${CDN}/firebase-app.js`);
   const firebaseAuth = await import(`${CDN}/firebase-auth.js`);
+  const ax = firebaseAuth;
   const fx = await import(`${CDN}/firebase-firestore.js`);
 
   const { initializeApp } = firebaseApp;
@@ -54,7 +55,7 @@ try {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   });
 
-  Object.assign(VCT, { app, auth, db, fx });
+  Object.assign(VCT, { app, auth, db, fx, ax });
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {

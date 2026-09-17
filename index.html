@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="./css/28-refinements.css">
   <link rel="stylesheet" href="./css/29-setup-restore.css">
   <link rel="stylesheet" href="./css/30-modal-keyboard.css">
+  <link rel="stylesheet" href="./css/31-auth.css">
 </head>
 <body>
 <div class="app-shell">
@@ -49,6 +50,9 @@
       <button type="button" class="nav" data-target="challenges">◇ <span>Challenges</span></button>
       <button type="button" class="nav" data-target="changelog">▤ <span>Changelog</span></button>
     </nav>
+    <div class="auth-panel" id="authPanel">
+      <div class="auth-state" id="authState"></div>
+    </div>
     <div class="side-bottom">
       <div class="mini"><span>Data storage</span><b>Local browser</b></div>
             <p class="riot-disclaimer">Independent project. Not affiliated with or endorsed by Riot Games. Reports and match data are user-generated.</p>
@@ -478,6 +482,7 @@
   <script src="./js/cloud/snapshot-diff.js"></script>
   <script src="./js/cloud/cloud-sync.js"></script>
   <script src="./js/cloud/cloud-migrate.js"></script>
+  <script src="./js/cloud/auth-ui.js"></script>
   <script src="./js/dom-utils.js"></script>
   <script src="./js/rank-utils.js"></script>
   <script src="./js/combobox-entities.js"></script>
@@ -599,6 +604,33 @@
     <div class="modal-actions"><button id="noticeOkBtn" class="primary" type="button" data-notice-close>Got it</button></div>
   </section>
 </div>
+
+<div class="modal hidden" id="authModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+  <div class="modal-backdrop" data-auth-close></div>
+  <div class="modal-card auth-card">
+    <header>
+      <h2 id="authModalTitle">Sign in</h2>
+      <button class="ghost" type="button" id="closeAuthModal" aria-label="Close">&times;</button>
+    </header>
+    <div class="auth-error hidden" id="authError" role="alert"></div>
+    <button class="ghost auth-google" type="button" id="googleSignInBtn">Continue with Google</button>
+    <div class="auth-divider"><span>or</span></div>
+    <form id="authForm">
+      <label for="authEmail">Email
+        <input type="email" id="authEmail" autocomplete="email" required>
+      </label>
+      <label for="authPassword">Password
+        <input type="password" id="authPassword" autocomplete="current-password" required minlength="6">
+      </label>
+      <button type="submit" id="authSubmitBtn">Sign in</button>
+    </form>
+    <p class="auth-switch">
+      <span id="authSwitchText">New here?</span>
+      <button class="linklike" type="button" id="authSwitchBtn">Create an account</button>
+    </p>
+  </div>
+</div>
+
 <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
 </body>
