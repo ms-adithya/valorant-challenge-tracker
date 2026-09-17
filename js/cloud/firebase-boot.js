@@ -30,7 +30,7 @@ try {
   const fx = await import(`${CDN}/firebase-firestore.js`);
 
   const { initializeApp } = firebaseApp;
-  const { getAuth, signInAnonymously, onAuthStateChanged } = firebaseAuth;
+  const { getAuth, signInAnonymously, onAuthStateChanged, onIdTokenChanged } = firebaseAuth;
   const {
     initializeFirestore,
     persistentLocalCache,
@@ -89,6 +89,16 @@ try {
     }
     window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user } }));
   });
+
+  if (typeof onIdTokenChanged === "function") {
+    onIdTokenChanged(auth, (user) => {
+      if (user) {
+        VCT.uid = user.uid;
+        VCT.isAnonymous = user.isAnonymous;
+        window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user } }));
+      }
+    });
+  }
 } catch (err) {
   console.warn("VCT: Firebase SDK unavailable or offline", err);
   if (typeof window.showAppNotice === "function") {

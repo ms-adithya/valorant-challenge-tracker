@@ -13,10 +13,11 @@
       .replace(/'/g, "&#39;");
   }
 
-  function renderAuthState() {
+  function renderAuthState(eventOrUser) {
+    if (typeof document === "undefined") return;
     const host = document.getElementById("authState");
     if (!host) return;
-    const VCT = root.VCT || window.VCT;
+    const VCT = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
     
     // If Firebase/Auth is unavailable: render "Working offline"
     if (!VCT || !VCT.auth) {
@@ -38,7 +39,9 @@
       return;
     }
 
-    const user = VCT.auth.currentUser;
+    const user = (eventOrUser && eventOrUser.detail && eventOrUser.detail.user) ||
+                 (eventOrUser && eventOrUser.uid ? eventOrUser : null) ||
+                 (VCT.auth && VCT.auth.currentUser);
 
     // If Auth is initialized with no user: render signed-out state
     if (!user) {
@@ -116,11 +119,14 @@
     const label = user.displayName || user.email || "Signed in";
     const sublabel = user.displayName && user.email ? user.email : "Cloud Sync Active";
     const initial = (user.displayName || user.email || "P").charAt(0).toUpperCase();
+    const avatarHtml = user.photoURL
+      ? `<img class="auth-avatar-img" src="${escapeHtml(user.photoURL)}" alt="Avatar" referrerpolicy="no-referrer" />`
+      : `<span class="auth-avatar-initial">${escapeHtml(initial)}</span>`;
     host.innerHTML = `
       <div class="auth-card-widget authenticated">
         <div class="auth-widget-header">
           <div class="auth-avatar-badge user">
-            <span class="auth-avatar-initial">${escapeHtml(initial)}</span>
+            ${avatarHtml}
           </div>
           <div class="auth-user-meta">
             <div class="auth-title-line">
@@ -311,6 +317,23 @@
     }
   }
 
+  function notifyAuthSuccess(user) {
+    const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
+    if (vct && user) {
+      vct.uid = user.uid;
+      vct.isAnonymous = Boolean(user.isAnonymous);
+    }
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      try {
+        const evt = typeof CustomEvent !== "undefined"
+          ? new CustomEvent("vct:auth", { detail: { user } })
+          : { type: "vct:auth", detail: { user } };
+        window.dispatchEvent(evt);
+      } catch (_) {}
+    }
+    renderAuthState(user);
+  }
+
   async function handleEmailAuth(email, password, mode) {
     const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
     if (!vct || !vct.auth || !vct.ax) {
@@ -325,28 +348,34 @@
       // document already written under it without needing a merge.
       if (current && current.isAnonymous) {
         try {
-          await ax.linkWithCredential(current, credential);
+          const res = await ax.linkWithCredential(current, credential);
+          const linkedUser = (res && res.user) || auth.currentUser || current;
+          notifyAuthSuccess(linkedUser);
           return;
         } catch (err) {
           // Pathway B: Credential collision
           if (err.code === "auth/credential-already-in-use" ||
               err.code === "auth/email-already-in-use") {
             await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
+            notifyAuthSuccess(auth.currentUser);
             return;
           }
           throw err;
         }
       }
       await ax.createUserWithEmailAndPassword(auth, email, password);
+      notifyAuthSuccess(auth.currentUser);
       return;
     }
 
     // Pathway C: Signing in as existing user from an anonymous session
     if (current && current.isAnonymous) {
       await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
+      notifyAuthSuccess(auth.currentUser);
       return;
     }
     await ax.signInWithEmailAndPassword(auth, email, password);
+    notifyAuthSuccess(auth.currentUser);
   }
 
   async function handleGoogleAuth() {
@@ -360,12 +389,15 @@
 
     if (current && current.isAnonymous) {
       try {
-        await ax.linkWithPopup(current, provider);
+        const res = await ax.linkWithPopup(current, provider);
+        const linkedUser = (res && res.user) || auth.currentUser || current;
+        notifyAuthSuccess(linkedUser);
         return;
       } catch (err) {
         // Explicit distinction: credential-already-in-use triggers merge flow
         if (err.code === "auth/credential-already-in-use") {
           await offerMerge(() => ax.signInWithPopup(auth, provider));
+          notifyAuthSuccess(auth.currentUser);
           return;
         }
         // account-exists-with-different-credential or other errors are thrown directly
@@ -374,6 +406,7 @@
       }
     }
     await ax.signInWithPopup(auth, provider);
+    notifyAuthSuccess(auth.currentUser);
   }
 
   function wireListeners() {
@@ -422,6 +455,7 @@
           const password = passwordInput ? passwordInput.value : "";
           await handleEmailAuth(email, password, authMode);
           closeAuthModal();
+          renderAuthState();
           const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
           if (showToastFn) {
             showToastFn(authMode === "signup" ? "Account created." : "Signed in.");
@@ -447,6 +481,7 @@
         try {
           await handleGoogleAuth();
           closeAuthModal();
+          renderAuthState();
           const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
           if (showToastFn) {
             showToastFn("Signed in with Google.");
