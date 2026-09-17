@@ -419,6 +419,13 @@
       } catch (err) {
         // Explicit distinction: credential-already-in-use triggers merge flow
         if (err.code === "auth/credential-already-in-use") {
+          const credential = (ax.GoogleAuthProvider && typeof ax.GoogleAuthProvider.credentialFromError === "function" && ax.GoogleAuthProvider.credentialFromError(err)) ||
+            err.credential;
+          if (credential && typeof ax.signInWithCredential === "function") {
+            await offerMerge(() => ax.signInWithCredential(auth, credential));
+            notifyAuthSuccess(auth.currentUser);
+            return;
+          }
           await offerMerge(() => ax.signInWithPopup(auth, provider));
           notifyAuthSuccess(auth.currentUser);
           return;

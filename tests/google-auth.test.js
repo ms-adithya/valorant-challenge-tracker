@@ -10,6 +10,7 @@ function createMockGoogleAuthEnvironment(initialUser = null) {
   const calls = {
     linkWithPopup: [],
     signInWithPopup: [],
+    signInWithCredential: [],
     providerInstances: [],
   };
 
@@ -17,6 +18,9 @@ function createMockGoogleAuthEnvironment(initialUser = null) {
     constructor() {
       this.providerId = "google.com";
       calls.providerInstances.push(this);
+    }
+    static credentialFromError(err) {
+      return { providerId: "google.com", token: "mock_token" };
     }
   }
 
@@ -37,8 +41,16 @@ function createMockGoogleAuthEnvironment(initialUser = null) {
       auth.currentUser = currentUser;
       return { user: currentUser };
     },
+    signInWithCredential: async (auth, credential) => {
+      calls.signInWithCredential.push({ credential });
+      if (ax._signInCredentialError) throw ax._signInCredentialError;
+      currentUser = { uid: "google_target_uid", email: "player@gmail.com", isAnonymous: false };
+      auth.currentUser = currentUser;
+      return { user: currentUser };
+    },
     _linkError: null,
     _signInError: null,
+    _signInCredentialError: null,
   };
 
   const auth = {
@@ -127,7 +139,9 @@ test("Google Auth: credential-already-in-use invokes offerMerge with confirm", a
   await authUi.handleGoogleAuth();
 
   assert.strictEqual(confirmPromptSeen, true);
-  assert.strictEqual(calls.signInWithPopup.length, 1);
+  assert.strictEqual(calls.linkWithPopup.length, 1, "Initial popup for Google auth");
+  assert.strictEqual(calls.signInWithCredential.length, 1, "Direct credential sign in without opening a 2nd popup");
+  assert.strictEqual(calls.signInWithPopup.length, 0, "No duplicate popup window was opened");
   assert.strictEqual(vct.auth.currentUser.uid, "google_target_uid");
   assert.ok(vct.pendingMerge);
   assert.strictEqual(vct.pendingMerge.activeChallenges[0].id, "c_g1");
@@ -148,7 +162,9 @@ test("Google Auth: credential-already-in-use with cancel stages nothing", async 
   const authUi = require("../js/cloud/auth-ui.js");
   await authUi.handleGoogleAuth();
 
-  assert.strictEqual(calls.signInWithPopup.length, 1);
+  assert.strictEqual(calls.linkWithPopup.length, 1, "Initial popup for Google auth");
+  assert.strictEqual(calls.signInWithCredential.length, 1, "Direct credential sign in without opening a 2nd popup");
+  assert.strictEqual(calls.signInWithPopup.length, 0, "No duplicate popup window was opened");
   assert.strictEqual(vct.auth.currentUser.uid, "google_target_uid");
   assert.strictEqual(vct.pendingMerge, null);
 });
