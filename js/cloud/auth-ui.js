@@ -180,8 +180,10 @@
     clearAuthError();
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
-    if (emailInput) {
+    if (emailInput && !emailInput.value) {
       setTimeout(() => emailInput.focus(), 50);
+    } else if (passwordInput) {
+      setTimeout(() => passwordInput.focus(), 50);
     }
   }
 
@@ -482,6 +484,14 @@
             showToastFn(authMode === "signup" ? "Account created." : "Signed in.");
           }
         } catch (err) {
+          if (err && (err.code === "auth/email-already-in-use" || err.code === "auth/credential-already-in-use")) {
+            const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
+            if (showToastFn) {
+              showToastFn("Account already exists. Switched to sign in.");
+            }
+            openAuthModal("signin");
+            return;
+          }
           console.error("VCT: auth failed", err);
           showAuthError(authMessage(err));
         } finally {
