@@ -122,8 +122,39 @@
     box.classList.add("hidden");
   }
 
+  function purgeLocalSession() {
+    const keys = ["vct4", "vctActiveChallenges", "vctArchives", "vct2"];
+    const locStorage = (typeof localStorage !== "undefined" && localStorage) ||
+      (typeof window !== "undefined" && window.localStorage) ||
+      (root && root.localStorage);
+    if (locStorage) {
+      for (const k of keys) {
+        try { locStorage.removeItem(k); } catch (_) {}
+      }
+    }
+    const sessStorage = (typeof sessionStorage !== "undefined" && sessionStorage) ||
+      (typeof window !== "undefined" && window.sessionStorage) ||
+      (root && root.sessionStorage);
+    if (sessStorage) {
+      try {
+        for (let i = (sessStorage.length || 0) - 1; i >= 0; i--) {
+          const k = typeof sessStorage.key === "function" ? sessStorage.key(i) : null;
+          if (k && (k.startsWith("vct") || k.startsWith("__vct"))) {
+            sessStorage.removeItem(k);
+          }
+        }
+      } catch (_) {}
+    }
+    const vct = (typeof window !== "undefined" && window.VCT) || (root && root.VCT) || null;
+    if (vct) {
+      vct.pendingMerge = null;
+    }
+  }
+
   async function signOut() {
-    const confirmFn = typeof window.appConfirm === "function" ? window.appConfirm : async () => true;
+    const confirmFn = (typeof window !== "undefined" && typeof window.appConfirm === "function")
+      ? window.appConfirm
+      : (typeof appConfirm === "function" ? appConfirm : async () => true);
     if (!await confirmFn({
       title: "Sign out?",
       message: "Your challenges stay in your account. This device will start a fresh local session.",
@@ -131,10 +162,11 @@
       kicker: "ACCOUNT",
     })) return;
 
-    const VCT = root.VCT || window.VCT;
+    const VCT = (typeof window !== "undefined" && window.VCT) || (root && root.VCT) || null;
     if (VCT && VCT.ax && typeof VCT.ax.signOut === "function" && VCT.auth) {
       await VCT.ax.signOut(VCT.auth);
     }
+    purgeLocalSession();
     if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
       window.location.reload();
     }
@@ -376,6 +408,7 @@
     clearAuthError,
     getAuthMode: () => authMode,
     signOut,
+    purgeLocalSession,
     handleEmailAuth,
     handleGoogleAuth,
     offerMerge,
