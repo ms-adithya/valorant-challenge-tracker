@@ -363,31 +363,32 @@
           const res = await ax.linkWithCredential(current, credential);
           const linkedUser = (res && res.user) || auth.currentUser || current;
           notifyAuthSuccess(linkedUser);
-          return;
+          return { isNewUser: true };
         } catch (err) {
           // Pathway B: Credential collision
           if (err.code === "auth/credential-already-in-use" ||
               err.code === "auth/email-already-in-use") {
             await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
             notifyAuthSuccess(auth.currentUser);
-            return;
+            return { isNewUser: false };
           }
           throw err;
         }
       }
       await ax.createUserWithEmailAndPassword(auth, email, password);
       notifyAuthSuccess(auth.currentUser);
-      return;
+      return { isNewUser: true };
     }
 
     // Pathway C: Signing in as existing user from an anonymous session
     if (current && current.isAnonymous) {
       await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
       notifyAuthSuccess(auth.currentUser);
-      return;
+      return { isNewUser: false };
     }
     await ax.signInWithEmailAndPassword(auth, email, password);
     notifyAuthSuccess(auth.currentUser);
+    return { isNewUser: false };
   }
 
   async function handleGoogleAuth() {
@@ -400,14 +401,20 @@
     const current = auth.currentUser;
 
     if (authMode === "signin") {
+      let res;
       if (current && current.isAnonymous) {
-        await offerMerge(() => ax.signInWithPopup(auth, provider));
-        notifyAuthSuccess(auth.currentUser);
-        return;
+        await offerMerge(async () => {
+          res = await ax.signInWithPopup(auth, provider);
+        });
+      } else {
+        res = await ax.signInWithPopup(auth, provider);
       }
-      await ax.signInWithPopup(auth, provider);
       notifyAuthSuccess(auth.currentUser);
-      return;
+      const isNewUser = Boolean(
+        (ax.getAdditionalUserInfo && res && ax.getAdditionalUserInfo(res)?.isNewUser) ||
+        (res && res._tokenResponse && res._tokenResponse.isNewUser)
+      );
+      return { isNewUser };
     }
 
     if (current && current.isAnonymous) {
@@ -415,7 +422,7 @@
         const res = await ax.linkWithPopup(current, provider);
         const linkedUser = (res && res.user) || auth.currentUser || current;
         notifyAuthSuccess(linkedUser);
-        return;
+        return { isNewUser: true };
       } catch (err) {
         // Explicit distinction: credential-already-in-use triggers merge flow
         if (err.code === "auth/credential-already-in-use") {
@@ -424,19 +431,24 @@
           if (credential && typeof ax.signInWithCredential === "function") {
             await offerMerge(() => ax.signInWithCredential(auth, credential));
             notifyAuthSuccess(auth.currentUser);
-            return;
+            return { isNewUser: false };
           }
           await offerMerge(() => ax.signInWithPopup(auth, provider));
           notifyAuthSuccess(auth.currentUser);
-          return;
+          return { isNewUser: false };
         }
         // account-exists-with-different-credential or other errors are thrown directly
         // to surface the appropriate friendly error message without auto-merging
         throw err;
       }
     }
-    await ax.signInWithPopup(auth, provider);
+    const res = await ax.signInWithPopup(auth, provider);
     notifyAuthSuccess(auth.currentUser);
+    const isNewUser = Boolean(
+      (ax.getAdditionalUserInfo && res && ax.getAdditionalUserInfo(res)?.isNewUser) ||
+      (res && res._tokenResponse && res._tokenResponse.isNewUser)
+    );
+    return { isNewUser };
   }
 
   function wireListeners() {
@@ -483,12 +495,13 @@
           const passwordInput = document.getElementById("authPassword");
           const email = emailInput ? emailInput.value.trim() : "";
           const password = passwordInput ? passwordInput.value : "";
-          await handleEmailAuth(email, password, authMode);
+          const result = await handleEmailAuth(email, password, authMode);
           closeAuthModal();
           renderAuthState();
           const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
           if (showToastFn) {
-            showToastFn(authMode === "signup" ? "Account created." : "Signed in.");
+            const isNew = result && typeof result.isNewUser === "boolean" ? result.isNewUser : (authMode === "signup");
+            showToastFn(isNew ? "Created account with email." : "Signed in.");
           }
         } catch (err) {
           if (err && (err.code === "auth/email-already-in-use" || err.code === "auth/credential-already-in-use")) {
@@ -517,12 +530,13 @@
         clearAuthError();
         googleBtn.disabled = true;
         try {
-          await handleGoogleAuth();
+          const result = await handleGoogleAuth();
           closeAuthModal();
           renderAuthState();
           const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
           if (showToastFn) {
-            showToastFn("Signed in with Google.");
+            const isNew = result && result.isNewUser;
+            showToastFn(isNew ? "Created account with Google." : "Signed in with Google.");
           }
         } catch (err) {
           // Benign popup cancellation/closures are handled silently

@@ -357,3 +357,42 @@ test("Google Auth: in signin mode, calls signInWithPopup directly once and start
   assert.strictEqual(cloudStartedUid, "google_target_uid");
 });
 
+// ---------------------------------------------------------------------------
+// 8. Distinction between Account Creation and Sign In
+// ---------------------------------------------------------------------------
+
+test("Google Auth: returns isNewUser true when linking an anonymous session for the first time", async () => {
+  const anonUser = { uid: "anon_fresh", isAnonymous: true };
+  const { vct } = createMockGoogleAuthEnvironment(anonUser);
+
+  global.window = {
+    VCT: vct,
+    document: { getElementById: () => null },
+  };
+
+  const authUi = require("../js/cloud/auth-ui.js");
+  authUi.openAuthModal("signup");
+
+  const res = await authUi.handleGoogleAuth();
+  assert.strictEqual(res.isNewUser, true);
+});
+
+test("Google Auth: returns isNewUser false when signing into an existing colliding account", async () => {
+  const anonUser = { uid: "anon_returning", isAnonymous: true };
+  const { vct, ax } = createMockGoogleAuthEnvironment(anonUser);
+  ax._linkError = { code: "auth/credential-already-in-use" };
+
+  global.window = {
+    VCT: vct,
+    activeChallenges: [],
+    archives: [],
+    document: { getElementById: () => null },
+  };
+
+  const authUi = require("../js/cloud/auth-ui.js");
+  authUi.openAuthModal("signup");
+
+  const res = await authUi.handleGoogleAuth();
+  assert.strictEqual(res.isNewUser, false);
+});
+
