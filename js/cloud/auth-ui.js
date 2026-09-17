@@ -136,7 +136,14 @@
       (typeof window !== "undefined" && window.sessionStorage) ||
       (root && root.sessionStorage);
     if (sessStorage) {
-      try { sessStorage.clear(); } catch (_) {}
+      try {
+        for (let i = (sessStorage.length || 0) - 1; i >= 0; i--) {
+          const k = typeof sessStorage.key === "function" ? sessStorage.key(i) : null;
+          if (k && (k.startsWith("vct") || k.startsWith("__vct"))) {
+            sessStorage.removeItem(k);
+          }
+        }
+      } catch (_) {}
     }
     const vct = (typeof window !== "undefined" && window.VCT) || (root && root.VCT) || null;
     if (vct) {

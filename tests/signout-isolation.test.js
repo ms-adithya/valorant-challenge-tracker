@@ -16,6 +16,7 @@ function createMockStorage() {
     setItem: (key, val) => store.set(key, String(val)),
     removeItem: (key) => store.delete(key),
     clear: () => store.clear(),
+    key: (i) => Array.from(store.keys())[i] ?? null,
     get length() { return store.size; },
   };
 }
@@ -35,6 +36,7 @@ test("Sign-out isolation: purgeLocalSession removes all VCT localStorage keys an
   mockLocal.setItem("unrelated_app_setting", "dark_mode");
 
   mockSession.setItem("vct_temp_key", "temp_val");
+  mockSession.setItem("unrelated_tab_state", "tab_2");
 
   const vct = { pendingMerge: { applied: false, activeChallenges: [{ id: "c1" }] } };
 
@@ -51,7 +53,8 @@ test("Sign-out isolation: purgeLocalSession removes all VCT localStorage keys an
   assert.strictEqual(mockLocal.getItem("vct2"), null, "vct2 must be purged");
   assert.strictEqual(mockLocal.getItem("unrelated_app_setting"), "dark_mode", "Unrelated keys preserved");
 
-  assert.strictEqual(mockSession.getItem("vct_temp_key"), null, "sessionStorage must be cleared");
+  assert.strictEqual(mockSession.getItem("vct_temp_key"), null, "vct session key must be purged");
+  assert.strictEqual(mockSession.getItem("unrelated_tab_state"), "tab_2", "unrelated session key preserved");
   assert.strictEqual(vct.pendingMerge, null, "pendingMerge must be reset to null");
 });
 
@@ -235,3 +238,4 @@ test("Sign-out isolation: fresh anonymous session can save and persist challenge
   assert.strictEqual(data.id, "c_fresh_1");
   assert.strictEqual(active.length, 1);
 });
+
