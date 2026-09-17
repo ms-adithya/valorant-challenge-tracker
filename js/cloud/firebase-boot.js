@@ -56,6 +56,7 @@ try {
   });
 
   Object.assign(VCT, { app, auth, db, fx, ax });
+  window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user: auth.currentUser } }));
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
