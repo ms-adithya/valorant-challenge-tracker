@@ -3,10 +3,20 @@
 
 /* Sidebar Auth Panel */
 .auth-panel {
-  padding: 14px 8px;
   padding: 10px 4px 6px;
   border-top: 1px solid var(--line);
   margin-top: auto;
+}
+
+.sidebar {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.sidebar .side-bottom {
+  margin-top: 4px;
 }
 
 .auth-state {
