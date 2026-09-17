@@ -148,6 +148,8 @@
     "auth/invalid-credential": "That email and password do not match an account.",
     "auth/too-many-requests": "Too many attempts. Wait a minute and try again.",
     "auth/network-request-failed": "No connection. Your data is still saved on this device.",
+    "auth/account-exists-with-different-credential": "That email is already registered with a different sign-in method. Sign in that way first, then link Google from your account panel.",
+    "auth/popup-blocked": "Your browser blocked the sign-in popup. Allow popups for this site and try again.",
   };
 
   function authMessage(err) {
@@ -234,6 +236,33 @@
     await ax.signInWithEmailAndPassword(auth, email, password);
   }
 
+  async function handleGoogleAuth() {
+    const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
+    if (!vct || !vct.auth || !vct.ax) {
+      throw new Error("Authentication is currently unavailable.");
+    }
+    const { auth, ax } = vct;
+    const provider = new ax.GoogleAuthProvider();
+    const current = auth.currentUser;
+
+    if (current && current.isAnonymous) {
+      try {
+        await ax.linkWithPopup(current, provider);
+        return;
+      } catch (err) {
+        // Explicit distinction: credential-already-in-use triggers merge flow
+        if (err.code === "auth/credential-already-in-use") {
+          await offerMerge(() => ax.signInWithPopup(auth, provider));
+          return;
+        }
+        // account-exists-with-different-credential or other errors are thrown directly
+        // to surface the appropriate friendly error message without auto-merging
+        throw err;
+      }
+    }
+    await ax.signInWithPopup(auth, provider);
+  }
+
   function wireListeners() {
     const closeBtn = document.getElementById("closeAuthModal");
     if (closeBtn) closeBtn.onclick = closeAuthModal;
@@ -296,11 +325,29 @@
       });
     }
 
-    // Google remains an inert stub for Task 10 (deferred to Task 11)
+    // Active Google handler for Task 11
     const googleBtn = document.getElementById("googleSignInBtn");
     if (googleBtn) {
-      googleBtn.addEventListener("click", (e) => {
-        e.preventDefault();
+      googleBtn.addEventListener("click", async () => {
+        clearAuthError();
+        googleBtn.disabled = true;
+        try {
+          await handleGoogleAuth();
+          closeAuthModal();
+          const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
+          if (showToastFn) {
+            showToastFn("Signed in with Google.");
+          }
+        } catch (err) {
+          // Benign popup cancellation/closures are handled silently
+          if (err && (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request")) {
+            return;
+          }
+          console.error("VCT: Google auth failed", err);
+          showAuthError(authMessage(err));
+        } finally {
+          googleBtn.disabled = false;
+        }
       });
     }
 
@@ -330,6 +377,7 @@
     getAuthMode: () => authMode,
     signOut,
     handleEmailAuth,
+    handleGoogleAuth,
     offerMerge,
     authMessage,
     AUTH_MESSAGES,
