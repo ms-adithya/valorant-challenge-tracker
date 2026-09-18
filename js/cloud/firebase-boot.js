@@ -30,7 +30,7 @@ try {
   const fx = await import(`${CDN}/firebase-firestore.js`);
 
   const { initializeApp } = firebaseApp;
-  const { getAuth, signInAnonymously, onAuthStateChanged } = firebaseAuth;
+  const { getAuth, signInAnonymously, onAuthStateChanged, onIdTokenChanged } = firebaseAuth;
   const {
     initializeFirestore,
     persistentLocalCache,
@@ -56,6 +56,7 @@ try {
   });
 
   Object.assign(VCT, { app, auth, db, fx, ax });
+  window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user: auth.currentUser } }));
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -75,6 +76,7 @@ try {
       return;
     }
     const first = VCT.uid === null;
+    const prevUid = VCT.uid;
     VCT.uid = user.uid;
     VCT.isAnonymous = user.isAnonymous;
     if (first) {
@@ -86,9 +88,31 @@ try {
           console.error("VCT: onReady callback error", cbErr);
         }
       }
+    } else if (prevUid && prevUid !== user.uid) {
+      const cloud = VCT.cloud || (window.VCT && window.VCT.cloud);
+      if (cloud && typeof cloud.start === "function") {
+        cloud.start(user.uid);
+      }
     }
     window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user } }));
   });
+
+  if (typeof onIdTokenChanged === "function") {
+    onIdTokenChanged(auth, (user) => {
+      if (user) {
+        const prevUid = VCT.uid;
+        VCT.uid = user.uid;
+        VCT.isAnonymous = user.isAnonymous;
+        if (prevUid && prevUid !== user.uid) {
+          const cloud = VCT.cloud || (window.VCT && window.VCT.cloud);
+          if (cloud && typeof cloud.start === "function") {
+            cloud.start(user.uid);
+          }
+        }
+        window.dispatchEvent(new CustomEvent("vct:auth", { detail: { user } }));
+      }
+    });
+  }
 } catch (err) {
   console.warn("VCT: Firebase SDK unavailable or offline", err);
   if (typeof window.showAppNotice === "function") {

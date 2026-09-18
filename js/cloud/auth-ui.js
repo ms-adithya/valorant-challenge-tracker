@@ -1,7 +1,7 @@
 // Account panel and sign-in modal shell. Classic script; Firebase auth functions
 // arrive via window.VCT.ax (set by firebase-boot.js).
 (function (root) {
-  let authMode = "signin";
+  let authMode = "signup";
 
   function escapeHtml(str) {
     if (typeof str !== "string") return "";
@@ -13,49 +13,136 @@
       .replace(/'/g, "&#39;");
   }
 
-  function renderAuthState() {
+  function renderAuthState(eventOrUser) {
+    if (typeof document === "undefined") return;
     const host = document.getElementById("authState");
     if (!host) return;
-    const VCT = root.VCT || window.VCT;
+    const VCT = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
     
     // If Firebase/Auth is unavailable: render "Working offline"
     if (!VCT || !VCT.auth) {
-      host.innerHTML = `<p class="auth-offline">Working offline</p>`;
+      host.innerHTML = `
+        <div class="auth-card-widget auth-offline-card">
+          <div class="auth-widget-header">
+            <div class="auth-avatar-badge offline">
+              <span class="auth-avatar-icon">☁</span>
+            </div>
+            <div class="auth-user-meta">
+              <div class="auth-title-line">
+                <strong class="auth-display-name">Storage Status</strong>
+                <span class="auth-pill pill-muted">Offline</span>
+              </div>
+              <p class="auth-offline">Working offline</p>
+            </div>
+          </div>
+        </div>`;
       return;
     }
 
-    const user = VCT.auth.currentUser;
+    const user = (eventOrUser && eventOrUser.detail && eventOrUser.detail.user) ||
+                 (eventOrUser && eventOrUser.uid ? eventOrUser : null) ||
+                 (VCT.auth && VCT.auth.currentUser);
 
     // If Auth is initialized with no user: render signed-out state
     if (!user) {
       host.innerHTML = `
-        <button class="ghost" type="button" id="openSignUpBtn">Create an account</button>
-        <button class="linklike" type="button" id="openSignInBtn">I already have one</button>`;
+        <div class="auth-card-widget">
+          <div class="auth-widget-header" id="authWidgetHeader" title="Click to sign in">
+            <div class="auth-avatar-badge guest">
+              <span class="auth-avatar-icon">👤</span>
+            </div>
+            <div class="auth-user-meta">
+              <div class="auth-title-line">
+                <strong class="auth-display-name">Player Profile</strong>
+                <span class="auth-pill pill-muted">Signed out</span>
+              </div>
+              <p class="auth-anon">Sign in to sync your match history</p>
+            </div>
+          </div>
+          <div class="auth-widget-actions">
+            <button class="auth-btn-primary" type="button" id="openSignUpBtn">
+              <span class="auth-btn-icon">⚡</span>
+              <span>Create an account</span>
+            </button>
+            <button class="auth-btn-secondary" type="button" id="openSignInBtn">
+              <span>Sign In</span>
+              <span class="auth-btn-hint">· I already have one</span>
+            </button>
+          </div>
+        </div>`;
       const signUpBtn = document.getElementById("openSignUpBtn");
       const signInBtn = document.getElementById("openSignInBtn");
+      const header = document.getElementById("authWidgetHeader");
       if (signUpBtn) signUpBtn.onclick = () => openAuthModal("signup");
       if (signInBtn) signInBtn.onclick = () => openAuthModal("signin");
+      if (header) header.onclick = () => openAuthModal("signin");
       return;
     }
 
     // Anonymous user
     if (user.isAnonymous) {
       host.innerHTML = `
-        <p class="auth-anon">Your data is saved on this device only.</p>
-        <button class="ghost" type="button" id="openSignUpBtn">Create an account</button>
-        <button class="linklike" type="button" id="openSignInBtn">I already have one</button>`;
+        <div class="auth-card-widget">
+          <div class="auth-widget-header" id="authWidgetHeader" title="Guest session - click to sign in">
+            <div class="auth-avatar-badge guest">
+              <span class="auth-avatar-icon">👤</span>
+            </div>
+            <div class="auth-user-meta">
+              <div class="auth-title-line">
+                <strong class="auth-display-name">Guest Player</strong>
+                <span class="auth-pill pill-amber">● Local</span>
+              </div>
+              <p class="auth-anon">Your data is saved on this device only.</p>
+            </div>
+          </div>
+          <div class="auth-widget-actions">
+            <button class="auth-btn-primary" type="button" id="openSignUpBtn">
+              <span class="auth-btn-icon">⚡</span>
+              <span>Create an account</span>
+            </button>
+            <button class="auth-btn-secondary" type="button" id="openSignInBtn">
+              <span>Sign In</span>
+              <span class="auth-btn-hint">· I already have one</span>
+            </button>
+          </div>
+        </div>`;
       const signUpBtn = document.getElementById("openSignUpBtn");
       const signInBtn = document.getElementById("openSignInBtn");
+      const header = document.getElementById("authWidgetHeader");
       if (signUpBtn) signUpBtn.onclick = () => openAuthModal("signup");
       if (signInBtn) signInBtn.onclick = () => openAuthModal("signin");
+      if (header) header.onclick = () => openAuthModal("signin");
       return;
     }
 
     // Authenticated named user
     const label = user.displayName || user.email || "Signed in";
+    const sublabel = user.displayName && user.email ? user.email : "Cloud Sync Active";
+    const initial = (user.displayName || user.email || "P").charAt(0).toUpperCase();
+    const avatarHtml = user.photoURL
+      ? `<img class="auth-avatar-img" src="${escapeHtml(user.photoURL)}" alt="Avatar" referrerpolicy="no-referrer" />`
+      : `<span class="auth-avatar-initial">${escapeHtml(initial)}</span>`;
     host.innerHTML = `
-      <p class="auth-user">${escapeHtml(label)}</p>
-      <button class="linklike" type="button" id="signOutBtn">Sign out</button>`;
+      <div class="auth-card-widget authenticated">
+        <div class="auth-widget-header">
+          <div class="auth-avatar-badge user">
+            ${avatarHtml}
+          </div>
+          <div class="auth-user-meta">
+            <div class="auth-title-line">
+              <strong class="auth-display-name" title="${escapeHtml(label)}">${escapeHtml(label)}</strong>
+              <span class="auth-pill pill-green">● Synced</span>
+            </div>
+            <p class="auth-user" title="${escapeHtml(sublabel)}">${escapeHtml(sublabel)}</p>
+          </div>
+        </div>
+        <div class="auth-widget-actions">
+          <button class="auth-btn-secondary auth-btn-signout" type="button" id="signOutBtn">
+            <span class="auth-btn-icon">↩</span>
+            <span>Sign out</span>
+          </button>
+        </div>
+      </div>`;
     const signOutBtn = document.getElementById("signOutBtn");
     if (signOutBtn) signOutBtn.onclick = signOut;
   }
@@ -93,8 +180,10 @@
     clearAuthError();
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
-    if (emailInput) {
+    if (emailInput && !emailInput.value) {
       setTimeout(() => emailInput.focus(), 50);
+    } else if (passwordInput) {
+      setTimeout(() => passwordInput.focus(), 50);
     }
   }
 
@@ -163,6 +252,12 @@
     })) return;
 
     const VCT = (typeof window !== "undefined" && window.VCT) || (root && root.VCT) || null;
+    if (VCT && VCT.cloud && typeof VCT.cloud.pushChanges === "function") {
+      try { await VCT.cloud.pushChanges(); } catch (_) {}
+    }
+    if (VCT && VCT.cloud && typeof VCT.cloud.stop === "function") {
+      VCT.cloud.stop();
+    }
     if (VCT && VCT.ax && typeof VCT.ax.signOut === "function" && VCT.auth) {
       await VCT.ax.signOut(VCT.auth);
     }
@@ -230,6 +325,27 @@
     }
   }
 
+  function notifyAuthSuccess(user) {
+    const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
+    if (vct && user) {
+      vct.uid = user.uid;
+      vct.isAnonymous = Boolean(user.isAnonymous);
+    }
+    const cloud = (vct && vct.cloud) || (typeof window !== "undefined" && window.VCT && window.VCT.cloud);
+    if (cloud && typeof cloud.start === "function" && user && user.uid) {
+      cloud.start(user.uid);
+    }
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      try {
+        const evt = typeof CustomEvent !== "undefined"
+          ? new CustomEvent("vct:auth", { detail: { user } })
+          : { type: "vct:auth", detail: { user } };
+        window.dispatchEvent(evt);
+      } catch (_) {}
+    }
+    renderAuthState(user);
+  }
+
   async function handleEmailAuth(email, password, mode) {
     const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
     if (!vct || !vct.auth || !vct.ax) {
@@ -244,28 +360,35 @@
       // document already written under it without needing a merge.
       if (current && current.isAnonymous) {
         try {
-          await ax.linkWithCredential(current, credential);
-          return;
+          const res = await ax.linkWithCredential(current, credential);
+          const linkedUser = (res && res.user) || auth.currentUser || current;
+          notifyAuthSuccess(linkedUser);
+          return { isNewUser: true };
         } catch (err) {
           // Pathway B: Credential collision
           if (err.code === "auth/credential-already-in-use" ||
               err.code === "auth/email-already-in-use") {
             await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
-            return;
+            notifyAuthSuccess(auth.currentUser);
+            return { isNewUser: false };
           }
           throw err;
         }
       }
       await ax.createUserWithEmailAndPassword(auth, email, password);
-      return;
+      notifyAuthSuccess(auth.currentUser);
+      return { isNewUser: true };
     }
 
     // Pathway C: Signing in as existing user from an anonymous session
     if (current && current.isAnonymous) {
       await offerMerge(() => ax.signInWithEmailAndPassword(auth, email, password));
-      return;
+      notifyAuthSuccess(auth.currentUser);
+      return { isNewUser: false };
     }
     await ax.signInWithEmailAndPassword(auth, email, password);
+    notifyAuthSuccess(auth.currentUser);
+    return { isNewUser: false };
   }
 
   async function handleGoogleAuth() {
@@ -277,22 +400,55 @@
     const provider = new ax.GoogleAuthProvider();
     const current = auth.currentUser;
 
+    if (authMode === "signin") {
+      let res;
+      if (current && current.isAnonymous) {
+        await offerMerge(async () => {
+          res = await ax.signInWithPopup(auth, provider);
+        });
+      } else {
+        res = await ax.signInWithPopup(auth, provider);
+      }
+      notifyAuthSuccess(auth.currentUser);
+      const isNewUser = Boolean(
+        (ax.getAdditionalUserInfo && res && ax.getAdditionalUserInfo(res)?.isNewUser) ||
+        (res && res._tokenResponse && res._tokenResponse.isNewUser)
+      );
+      return { isNewUser };
+    }
+
     if (current && current.isAnonymous) {
       try {
-        await ax.linkWithPopup(current, provider);
-        return;
+        const res = await ax.linkWithPopup(current, provider);
+        const linkedUser = (res && res.user) || auth.currentUser || current;
+        notifyAuthSuccess(linkedUser);
+        return { isNewUser: true };
       } catch (err) {
         // Explicit distinction: credential-already-in-use triggers merge flow
         if (err.code === "auth/credential-already-in-use") {
+          const credential = (ax.GoogleAuthProvider && typeof ax.GoogleAuthProvider.credentialFromError === "function" && ax.GoogleAuthProvider.credentialFromError(err)) ||
+            err.credential;
+          if (credential && typeof ax.signInWithCredential === "function") {
+            await offerMerge(() => ax.signInWithCredential(auth, credential));
+            notifyAuthSuccess(auth.currentUser);
+            return { isNewUser: false };
+          }
           await offerMerge(() => ax.signInWithPopup(auth, provider));
-          return;
+          notifyAuthSuccess(auth.currentUser);
+          return { isNewUser: false };
         }
         // account-exists-with-different-credential or other errors are thrown directly
         // to surface the appropriate friendly error message without auto-merging
         throw err;
       }
     }
-    await ax.signInWithPopup(auth, provider);
+    const res = await ax.signInWithPopup(auth, provider);
+    notifyAuthSuccess(auth.currentUser);
+    const isNewUser = Boolean(
+      (ax.getAdditionalUserInfo && res && ax.getAdditionalUserInfo(res)?.isNewUser) ||
+      (res && res._tokenResponse && res._tokenResponse.isNewUser)
+    );
+    return { isNewUser };
   }
 
   function wireListeners() {
@@ -339,13 +495,23 @@
           const passwordInput = document.getElementById("authPassword");
           const email = emailInput ? emailInput.value.trim() : "";
           const password = passwordInput ? passwordInput.value : "";
-          await handleEmailAuth(email, password, authMode);
+          const result = await handleEmailAuth(email, password, authMode);
           closeAuthModal();
+          renderAuthState();
           const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
           if (showToastFn) {
-            showToastFn(authMode === "signup" ? "Account created." : "Signed in.");
+            const isNew = result && typeof result.isNewUser === "boolean" ? result.isNewUser : (authMode === "signup");
+            showToastFn(isNew ? "Created account with email." : "Signed in.");
           }
         } catch (err) {
+          if (err && (err.code === "auth/email-already-in-use" || err.code === "auth/credential-already-in-use")) {
+            const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
+            if (showToastFn) {
+              showToastFn("Account already exists. Switched to sign in.");
+            }
+            openAuthModal("signin");
+            return;
+          }
           console.error("VCT: auth failed", err);
           showAuthError(authMessage(err));
         } finally {
@@ -364,11 +530,13 @@
         clearAuthError();
         googleBtn.disabled = true;
         try {
-          await handleGoogleAuth();
+          const result = await handleGoogleAuth();
           closeAuthModal();
+          renderAuthState();
           const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
           if (showToastFn) {
-            showToastFn("Signed in with Google.");
+            const isNew = result && result.isNewUser;
+            showToastFn(isNew ? "Created account with Google." : "Signed in with Google.");
           }
         } catch (err) {
           // Benign popup cancellation/closures are handled silently
