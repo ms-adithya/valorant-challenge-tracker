@@ -1,7 +1,7 @@
 # Valorant Challenge Tracker
 
 [![Live App](https://img.shields.io/badge/Live_App-valorant--challenge--tracker.web.app-00f59b?style=flat&logo=firebase)](https://valorant-challenge-tracker.web.app)
-[![Tests](https://img.shields.io/badge/Tests-76%20unit%20%7C%2035%20rules-brightgreen?style=flat&logo=node.js)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-124%20unit%20%7C%2040%20rules-brightgreen?style=flat&logo=node.js)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A high-performance, local-first web application designed for competitive VALORANT players to log matches, follow rank and RR progression, analyze agent/map performance, and celebrate ranked climb milestones. Built with zero runtime dependencies, robust offline support, and seamless real-time cloud synchronization.
@@ -18,7 +18,7 @@ A high-performance, local-first web application designed for competitive VALORAN
 - **Publication-Ready Exports**: Generate paginated, printable PDF challenge completion reports with high-resolution layout and match histories, or export clean CSV and JSON datasets.
 - **Local-First & Phase 1 Cloud Sync**:
   - **Local-First Architecture**: Completely functional offline with immediate browser storage persistence.
-  - **Real-Time Multi-Tab Sync**: When signed in with Firebase, background synchronization propagates updates across browser tabs in real time, with durable cloud persistence and offline recovery (cross-device sync arrives with Phase 2 account linking).
+  - **Real-Time Account Sync**: Anonymous and linked Firebase accounts synchronize challenges and matches across tabs and devices, with durable cloud persistence and offline recovery.
   - **Durable Tombstones**: Deletions record persistent tombstones in Cloud Firestore, preventing phantom "zombie" resurrections across concurrent sessions.
   - **Automatic Migration**: Existing local storage data automatically migrates to Cloud Firestore on first sign-in without data loss.
   - **Offline Resilience & Queueing**: Changes made while disconnected are queued and safely synchronized when connectivity resumes.
@@ -44,6 +44,15 @@ Then open `http://localhost:8000` in your browser. (Alternatively, use VS Code *
 > [!NOTE]
 > The local Firebase Emulator Suite is dedicated to executing automated Firestore Security Rules unit tests (`npm run test:rules`). The browser runtime is a static web client that connects to the project services configured in `js/cloud/firebase-boot.js`.
 
+### Client error reporting
+
+Uncaught browser errors and unhandled promise rejections are captured by the small
+`js/error-reporting.js` module. To receive production reports, define
+`window.VCT_ERROR_REPORT_URL` before the script loads and point it to an HTTPS endpoint
+accepting JSON `{ errors: [...] }`. Without that optional endpoint, reports stay in a
+bounded local queue and are not sent anywhere. Common emails, tokens, passwords, secrets,
+and API-key query parameters are redacted before delivery.
+
 ---
 
 ## Testing
@@ -51,16 +60,16 @@ Then open `http://localhost:8000` in your browser. (Alternatively, use VS Code *
 The repository maintains an automated test suite verifying data integrity, edge cases, and server rules:
 
 ```bash
-# Run the pure-function Node test suite (76 tests)
+# Run the pure-function Node test suite (124 tests)
 npm test
 
-# Run Firestore security rules tests against the Firestore emulator (35 tests)
+# Run Firestore security rules tests against the Firestore emulator (40 tests)
 # Note: Requires local Java runtime (Microsoft OpenJDK 21)
 npm run test:rules
 ```
 
-- **Pure-Function Suite (`npm test`)**: 76 unit and integration tests covering snapshot diffing, storage recovery, match number reconciliation, rank progression derivation, input validation, and dialog event delegation.
-- **Rules Suite (`npm run test:rules`)**: 35 emulator tests covering tenant data isolation, tombstone immutability, `getAfter()` write barriers, and schema validation.
+- **Pure-Function Suite (`npm test`)**: 124 unit and integration tests covering authentication, account switching, sign-out isolation, snapshot diffing, migration, storage recovery, match number reconciliation, rank progression derivation, input validation, and dialog event delegation.
+- **Rules Suite (`npm run test:rules`)**: 40 emulator tests covering tenant data isolation, tombstone immutability, `getAfter()` write barriers, and schema validation.
 
 ---
 
@@ -96,6 +105,11 @@ valorant-challenge-tracker/
 │   ├── snapshot-model.test.js # Snapshot construction, hydration & round-trips
 │   ├── snapshot-diff.test.js  # Snapshot diffing & batch chunking logic
 │   ├── cloud-migrate.test.js  # Local-to-cloud data migration tests
+│   ├── auth-ui.test.js         # Account panel and modal behavior
+│   ├── email-auth.test.js      # Email linking and account merge flows
+│   ├── google-auth.test.js     # Google linking, collisions, and popup handling
+│   ├── multi-device-sync.test.js # Account sync and snapshot orchestration
+│   └── signout-isolation.test.js # Session cleanup and account isolation
 │   └── rules/                 # Firestore rules unit test specs
 ├── firestore.rules         # Server-enforced Firestore security rules
 ├── firestore.indexes.json  # Cloud Firestore composite indexes
