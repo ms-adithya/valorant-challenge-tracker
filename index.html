@@ -519,6 +519,7 @@
   <script src="./js/export.js"></script>
   <script src="./js/match-table-controls.js"></script>
   <script src="./js/bootstrap.js"></script>
+  <script src="./js/error-reporting.js"></script>
   <script type="module" src="./js/cloud/firebase-boot.js"></script>
 
 
@@ -621,14 +622,19 @@
       </svg>
       <span>Continue with Google</span>
     </button>
-    <div class="auth-divider"><span>or</span></div>
+        <div class="auth-divider"><span>or</span></div>
     <form id="authForm">
-      <label for="authEmail">Email
+      <div class="auth-field">
+        <label for="authEmail">Email</label>
         <input type="email" id="authEmail" autocomplete="email" required>
-      </label>
-      <label for="authPassword">Password
+      </div>
+      <div class="auth-field">
+        <div class="auth-label-row">
+          <label for="authPassword">Password</label>
+          <button type="button" class="auth-forgot-btn">Forgot?</button>
+        </div>
         <input type="password" id="authPassword" autocomplete="current-password" required minlength="6">
-      </label>
+      </div>
       <button type="submit" id="authSubmitBtn">Sign in</button>
     </form>
     <p class="auth-switch">

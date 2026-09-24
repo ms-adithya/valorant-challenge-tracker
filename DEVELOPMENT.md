@@ -6,22 +6,28 @@ This document is for maintainers and contributors. It records implementation bou
  
  The tracker is a static application with classic JavaScript files. Scripts share the global scope and are loaded synchronously in the order listed near the end of `index.html`. Script order is load-bearing because later files use functions and state created by earlier files.
  
- The app stores challenges and matches in browser local storage. There is no required backend, account system, build step, or package manager for the client runtime.
+ The app keeps a synchronous localStorage cache for first paint and offline writes, then synchronizes account-owned state with Firebase Authentication and Cloud Firestore when the Firebase module is available. There is no frontend build step; package.json provides development and emulator tooling.
  
 - Developer tooling (`package.json`) provides local emulation and test execution (`firebase-tools`, `@firebase/rules-unit-testing`) without requiring a bundler or compiler.
 - Hosting is configured via `firebase.json` for Firebase Hosting and local emulators.
-- Future phases incrementally introduce Cloud Firestore as an offline-first persistence layer behind `persist()`, with Firebase Auth and account linking.
+- `persist()` remains local-first and dispatches additive Firestore synchronization after a successful local write. Anonymous sessions can be linked to email/password or Google accounts without changing the Firebase UID.
 - Cloud architecture and phase breakdown are specified in `docs/superpowers/specs/2026-09-06-cloud-backend-and-accounts-design.md` and `docs/superpowers/plans/2026-09-06-cloud-backend-phases-0-3.md`.
  
  ## Development & Testing
 
 Developer commands available via `package.json`:
 
-- `npm test` - Runs the 76 pure Node.js unit and integration tests (`node --test tests/*.test.js`). Fast, local, offline, with zero external dependencies.
-- `npm run test:rules` - Runs the 35 Firestore Security Rules unit tests against the local Firestore emulator (`firebase emulators:exec --only firestore "node --test tests/rules/firestore-rules.test.js"`). Requires a local Java runtime (Microsoft OpenJDK 21).
+- `npm test` - Runs the 124 pure Node.js unit and integration tests (`node --test tests/*.test.js`). Fast, local, offline, with zero external dependencies.
+- `npm run test:rules` - Runs the 40 Firestore Security Rules unit tests against the local Firestore emulator (`firebase emulators:exec --only firestore "node --test tests/rules/firestore-rules.test.js"`). Requires a local Java runtime (Microsoft OpenJDK 21).
 - `npm run emulators` - Starts local Firebase emulators (used for manual rules testing or inspection).
 - `npm run deploy` - Deploys static files to Firebase Hosting.
 - `npm run deploy:rules` - Deploys updated Firestore security rules to Cloud Firestore.
+
+Client error reporting is available through `js/error-reporting.js`. Set
+`window.VCT_ERROR_REPORT_URL` before that script loads to an HTTPS endpoint that accepts
+JSON `{ errors: [...] }` payloads. Without an endpoint, errors remain in the browser's
+small `vctErrorQueue` for local diagnostics and are never transmitted. The reporter
+redacts common token, password, secret, API-key, and email patterns before queueing.
 
 ## Source layout
 
@@ -33,6 +39,7 @@ Developer commands available via `package.json`:
   - `cloud-sync.js` - Push/pull synchronization bridge, reconciliation, and tombstone tracking.
   - `cloud-migrate.js` - One-time migration from local storage to Cloud Firestore on first sign-in.
   - `firebase-boot.js` - Modular Firebase SDK loader and authentication bootstrapping.
+    - `auth-ui.js` - Account panel, email/password and Google linking, merge prompts, and sign-out isolation.
 - `js/challenge-actions.js` owns challenge lifecycle operations (open, archive, unarchive, delete).
 - `js/dialogs.js` owns confirmation modals, notice dialogs, toasts, and event delegation.
 - `js/match-*.js` files own match entry, validation, saving, importing, filtering, and rendering.
@@ -69,6 +76,13 @@ The tracker implements a resilient, local-first synchronization model with Cloud
 - `firestore.rules` enforces that document deletions MUST be accompanied by the corresponding tombstone write in the exact same batch.
 - Rules check `isTombstonedChallengeAfter` and `isTombstonedMatchAfter` using `existsAfter()` and `getAfter()` on `/users/{uid}/meta/tombstones`.
 - Any delete attempted without its corresponding tombstone key is rejected by the server.
+
+### 5. Account and data flow
+- Classic scripts load localStorage state first so the UI remains usable offline.
+- Firebase Auth establishes an anonymous identity, then migration copies legacy localStorage data to that account once.
+- Linking email/password or Google preserves the anonymous UID; signing in to another account can stage an explicit merge.
+- Cloud listeners rehydrate the canonical challenge and match globals, mirror the last-known-good state back to localStorage, and render again.
+- Sign-out stops cloud listeners, flushes pending writes, clears VCT local/session state, and reloads into a fresh local session.
 
 ## Data Boundaries & Runtime Invariants
 
