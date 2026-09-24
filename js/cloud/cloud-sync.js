@@ -439,7 +439,7 @@
           (typeof window !== "undefined" && window.VCTSnapshotModel && window.VCTSnapshotModel.newMatchId) ||
           (() => `m_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
         const ensureChallengeIdFn = typeof ensureChallengeId === "function" ? ensureChallengeId : (c => {
-          if (c && !c.id) c.id = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          if (c && !c.id) c.id = `ch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
           return c;
         });
 
