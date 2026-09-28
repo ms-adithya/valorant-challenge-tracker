@@ -267,6 +267,18 @@
     }
   }
 
+  async function handleForgotPassword(email) {
+    const vct = root.VCT || (typeof window !== "undefined" ? window.VCT : null);
+    if (!vct || !vct.auth || !vct.ax) {
+      throw new Error("Authentication is currently unavailable.");
+    }
+    const { auth, ax } = vct;
+    if (typeof ax.sendPasswordResetEmail !== "function") {
+      throw new Error("Password reset is not supported by the current auth provider.");
+    }
+    return ax.sendPasswordResetEmail(auth, email);
+  }
+
   const AUTH_MESSAGES = {
     "auth/invalid-email": "That email address does not look right.",
     "auth/missing-password": "Enter your password.",
@@ -277,6 +289,7 @@
     "auth/network-request-failed": "No connection. Your data is still saved on this device.",
     "auth/account-exists-with-different-credential": "That email is already registered with a different sign-in method. Sign in that way first, then link Google from your account panel.",
     "auth/popup-blocked": "Your browser blocked the sign-in popup. Allow popups for this site and try again.",
+    "auth/user-not-found": "No account exists with that email. Try creating one instead.",
   };
 
   function authMessage(err) {
@@ -551,6 +564,34 @@
       });
     }
 
+        // Forgot password handler (Task 14 fix)
+    const forgotBtn = document.getElementById("authForgotBtn");
+    if (forgotBtn) {
+      forgotBtn.addEventListener("click", async () => {
+        const emailInput = document.getElementById("authEmail");
+        const email = emailInput ? emailInput.value.trim() : "";
+        if (!email) {
+          showAuthError("Enter your email first.");
+          return;
+        }
+        clearAuthError();
+        forgotBtn.disabled = true;
+        forgotBtn.textContent = "Sending…";
+        try {
+          await handleForgotPassword(email);
+          closeAuthModal();
+          const showToastFn = typeof window !== "undefined" && typeof window.showToast === "function" ? window.showToast : null;
+          if (showToastFn) showToastFn("Password reset email sent. Check your inbox.");
+        } catch (err) {
+          console.error("VCT: forgot password failed", err);
+          showAuthError(authMessage(err));
+        } finally {
+          forgotBtn.disabled = false;
+          forgotBtn.textContent = "Forgot?";
+        }
+      });
+    }
+
     if (typeof window !== "undefined") {
       window.addEventListener("vct:auth", renderAuthState);
     }
@@ -568,7 +609,7 @@
     }
   }
 
-  const api = {
+    const api = {
     renderAuthState,
     openAuthModal,
     closeAuthModal,
@@ -579,6 +620,7 @@
     purgeLocalSession,
     handleEmailAuth,
     handleGoogleAuth,
+    handleForgotPassword,
     offerMerge,
     authMessage,
     AUTH_MESSAGES,
