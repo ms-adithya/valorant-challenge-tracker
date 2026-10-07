@@ -73,6 +73,10 @@ test('analytics labels are escaped in agent, distribution, and win-bar output', 
     assert.doesNotMatch(html, /<img[^>]*onerror/i);
     assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   }
+  const titleTag = global.$('agentWinBars').innerHTML
+    .match(/<span class="hbar-name"[^>]*>/)?.[0];
+  assert.ok(titleTag);
+  assert.match(titleTag, /title="[^"]*&quot;[^&#]*&#39;[^\"]*">/);
 });
 
 test('top-map renderer escapes attacker-controlled map names', () => {
@@ -108,7 +112,7 @@ test('import preview escapes untrusted fields before commit', () => {
     match: {
       agent: hostile,
       map: hostile,
-      result: 'Win',
+      result: hostile,
       myScore: 13,
       enemyScore: 4,
       rankAfter: hostile,
@@ -122,4 +126,5 @@ test('import preview escapes untrusted fields before commit', () => {
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html, /<img[^>]*onerror/i);
   assert.doesNotMatch(html, /<[^>]+\sonclick\s*=/i);
+  assert.match(html, /<span class="result-pill ">No result<\/span>/);
 });
