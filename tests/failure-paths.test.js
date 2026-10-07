@@ -1182,7 +1182,7 @@ test("cloud sync batch: deleting challenge with multiple matches deletes all doc
   };
 
   global.window = {
-    VCT: { fx: mockFx, db: {}, uid: "alice" },
+    VCT: { fx: mockFx, db: {}, uid: "alice", auth: { currentUser: { uid: "alice" } } },
     buildSnapshot,
     diffSnapshots,
     chunk,
@@ -1206,6 +1206,7 @@ test("cloud sync batch: deleting challenge with multiple matches deletes all doc
     cloudSync._setHydrated(true);
     cloudSync._setLastSyncedSnapshot(initialSnap);
     cloudSync._setTombstones({});
+    cloudSync._setActiveUidForTests("alice");
 
     // User deletes the challenge: globals are now empty
     global.data = null;
@@ -1233,6 +1234,7 @@ test("cloud sync batch: deleting challenge with multiple matches deletes all doc
     const parentUpdates = recordedOps.updates.filter((u) => u.ref === "users/alice/challenges/c_del_test");
     assert.strictEqual(parentUpdates.length, 0, "Deleted parent challenge must NOT be touched with batch.update");
   } finally {
+    cloudSync._setActiveUidForTests(null);
     global.window = origWindow;
     global.data = origData;
     global.activeChallenges = origActive;
@@ -1268,7 +1270,7 @@ test("cloud sync batching A: 300 distributed match updates across 300 challenges
   };
 
   global.window = {
-    VCT: { fx: mockFx, db: {}, uid: "alice" },
+    VCT: { fx: mockFx, db: {}, uid: "alice", auth: { currentUser: { uid: "alice" } } },
     buildSnapshot,
     diffSnapshots,
   };
@@ -1293,6 +1295,7 @@ test("cloud sync batching A: 300 distributed match updates across 300 challenges
     cloudSync._setHydrated(true);
     cloudSync._setLastSyncedSnapshot(initialSnap);
     cloudSync._setTombstones({});
+    cloudSync._setActiveUidForTests("alice");
 
     // Update every match's score
     const updatedChallenges = challenges.map((c) => ({
@@ -1318,6 +1321,7 @@ test("cloud sync batching A: 300 distributed match updates across 300 challenges
       );
     }
   } finally {
+    cloudSync._setActiveUidForTests(null);
     global.window = origWindow;
     global.data = origData;
     global.activeChallenges = origActive;

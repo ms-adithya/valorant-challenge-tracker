@@ -9,8 +9,20 @@
   let lastRawEntries = null;
   let lastRawByChallenge = null;
   let activeUid = null;
+  let currentSessionToken = 0;
   let unsubTombstones = null;
   let unsubChallenges = null;
+
+  function _getSessionGeneration() {
+    return currentSessionToken;
+  }
+
+  function _isCurrentSession(token, uid = activeUid) {
+    const vct = typeof window !== "undefined" ? window.VCT : null;
+    return Boolean(token) && token === currentSessionToken && uid === activeUid &&
+      Boolean(vct && vct.uid === uid && vct.auth &&
+        vct.auth.currentUser && vct.auth.currentUser.uid === uid);
+  }
 
   function userRoot(uid) {
     const vct = typeof window !== "undefined" ? window.VCT : null;
@@ -137,6 +149,9 @@
   async function pushChanges() {
     const VCT = typeof window !== "undefined" ? window.VCT : null;
     if (!VCT || !VCT.uid || !VCT.fx) return;
+    const sessionToken = currentSessionToken;
+    const sessionUid = VCT.uid;
+    if (!_isCurrentSession(sessionToken, sessionUid)) return;
     // Never write before the first snapshot lands, or an empty local state
     // would diff into a full delete of everything on the server.
     if (!hydrated) return;
@@ -174,6 +189,7 @@
 
       const { fx, db, uid } = VCT;
       for (const part of chunkChangesByOperations(changes, deletedChallenges, tombstones, 400)) {
+        if (!_isCurrentSession(sessionToken, sessionUid)) return;
         const batch = fx.writeBatch(db);
         const challengesToTouch = new Set();
         const tombstoneUpdates = {};
@@ -233,7 +249,9 @@
         }
 
         await batch.commit();
+        if (!_isCurrentSession(sessionToken, sessionUid)) return;
       }
+      if (!_isCurrentSession(sessionToken, sessionUid)) return;
       lastSyncedSnapshot = next;
     } catch (err) {
       // A failed push is recoverable: lastSyncedSnapshot is not advanced, so
@@ -262,6 +280,9 @@
     if (!VCT || !VCT.fx || !VCT.db || !uid) return;
     if (activeUid === uid && unsubChallenges) return;
 
+    currentSessionToken += 1;
+    const sessionToken = currentSessionToken;
+
     if (unsubTombstones) { try { unsubTombstones(); } catch (_) {} unsubTombstones = null; }
     if (unsubChallenges) { try { unsubChallenges(); } catch (_) {} unsubChallenges = null; }
 
@@ -287,44 +308,54 @@
       } catch (err) {
         console.warn("VCT: profile document update failed", err);
       }
+      if (!_isCurrentSession(sessionToken, uid)) return;
     }
 
     // Subscribe to durable tombstones
     // Fetch initial tombstones before attaching challenge listener to eliminate race condition
     const tombstonesRef = fx.doc(db, "users", uid, "meta", "tombstones");
+    let initialTombstones = {};
     try {
       const initSnap = await fx.getDoc(tombstonesRef);
       if (initSnap && initSnap.exists()) {
-        tombstones = initSnap.data() || {};
+        initialTombstones = initSnap.data() || {};
       }
     } catch (err) {
       console.warn("VCT: initial tombstones fetch failed", err);
     }
+    if (!_isCurrentSession(sessionToken, uid)) return;
+    tombstones = initialTombstones;
 
     // Subscribe to durable tombstones for subsequent out-of-band updates
-    unsubTombstones = fx.onSnapshot(tombstonesRef, (snap) => {
-      if (snap && snap.exists()) {
-        const previous = tombstones || {};
-        const prevKeys = new Set(Object.keys(previous));
-        const nextData = snap.data() || {};
-        tombstones = nextData;
-        const newKeys = Object.keys(nextData).filter((k) => !prevKeys.has(k));
-        // If newly tombstoned items affect current in-memory challenge/match data, rehydrate immediately
-        if (newKeys.length > 0 && lastRawEntries && lastRawByChallenge) {
-          const filteredEntries = lastRawEntries.filter((entry) => !tombstones["c_" + entry.id]);
-          const filteredByChallenge = {};
-          for (const entry of filteredEntries) {
-            const ms = lastRawByChallenge[entry.id] || [];
-            filteredByChallenge[entry.id] = ms.filter((m) => !tombstones["m_" + entry.id + "_" + m.id]);
-          }
-          rehydrate(filteredEntries, filteredByChallenge);
+    const stopTombstones = fx.onSnapshot(tombstonesRef, (snap) => {
+      if (!snap || !snap.exists()) return;
+      if (!_isCurrentSession(sessionToken, uid)) return;
+      const previous = tombstones || {};
+      const prevKeys = new Set(Object.keys(previous));
+      const nextData = snap.data() || {};
+      tombstones = nextData;
+      const newKeys = Object.keys(nextData).filter((k) => !prevKeys.has(k));
+      // If newly tombstoned items affect current in-memory challenge/match data, rehydrate immediately
+      if (newKeys.length > 0 && lastRawEntries && lastRawByChallenge) {
+        const filteredEntries = lastRawEntries.filter((entry) => !tombstones["c_" + entry.id]);
+        const filteredByChallenge = {};
+        for (const entry of filteredEntries) {
+          const ms = lastRawByChallenge[entry.id] || [];
+          filteredByChallenge[entry.id] = ms.filter((m) => !tombstones["m_" + entry.id + "_" + m.id]);
         }
+        rehydrate(filteredEntries, filteredByChallenge);
       }
     }, (err) => console.warn("VCT: tombstones subscription failed", err));
+    if (!_isCurrentSession(sessionToken, uid)) {
+      try { stopTombstones(); } catch (_) {}
+      return;
+    }
+    unsubTombstones = stopTombstones;
 
     let latestSnapshotSeq = 0;
     const challengesRef = fx.collection(db, "users", uid, "challenges");
-    unsubChallenges = fx.onSnapshot(challengesRef, async (snap) => {
+    const stopChallenges = fx.onSnapshot(challengesRef, async (snap) => {
+      if (!_isCurrentSession(sessionToken, uid)) return;
       const seq = ++latestSnapshotSeq;
       lastRawEntries = snap.docs.map((d) => ({ id: d.id, doc: d.data() }));
       const entries = lastRawEntries.filter((entry) => !tombstones["c_" + entry.id]);
@@ -337,12 +368,19 @@
           .filter((m) => !tombstones["m_" + entry.id + "_" + m.id]);
       }));
       if (seq !== latestSnapshotSeq) return;
+      if (!_isCurrentSession(sessionToken, uid)) return;
       lastRawByChallenge = byChallenge;
       rehydrate(entries, byChallenge);
     }, (err) => console.error("VCT: challenge subscription failed", err));
+    if (!_isCurrentSession(sessionToken, uid)) {
+      try { stopChallenges(); } catch (_) {}
+      return;
+    }
+    unsubChallenges = stopChallenges;
   }
 
   function stop() {
+    currentSessionToken += 1;
     if (unsubTombstones) { try { unsubTombstones(); } catch (_) {} unsubTombstones = null; }
     if (unsubChallenges) { try { unsubChallenges(); } catch (_) {} unsubChallenges = null; }
     activeUid = null;
@@ -355,6 +393,7 @@
 
   function rehydrate(entries, byChallenge) {
     const vct = typeof window !== "undefined" ? window.VCT : (typeof root !== "undefined" ? root.VCT : null);
+    if (vct && vct.uid && activeUid && vct.uid !== activeUid) return;
     const pending = vct && vct.pendingMerge;
     const hasPendingMerge = pending && !pending.applied &&
       ((Array.isArray(pending.activeChallenges) && pending.activeChallenges.length > 0) ||
@@ -518,6 +557,12 @@
   }
 
   if (typeof module !== "undefined" && module.exports) {
+    api._getSessionGeneration = _getSessionGeneration;
+    api._isCurrentSession = _isCurrentSession;
+    api._setActiveUidForTests = (uid) => {
+      currentSessionToken += 1;
+      activeUid = uid;
+    };
     api._setLastSyncedSnapshot = (snap) => { lastSyncedSnapshot = snap; };
     api._setHydrated = (val) => { hydrated = val; };
     api._setTombstones = (t) => { tombstones = t; };

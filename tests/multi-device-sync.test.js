@@ -61,6 +61,7 @@ function setupSyncTestEnvironment(initialUser = null) {
   const vct = {
     fx: mockFx,
     db: { type: "mockDb" },
+    uid: initialUser ? initialUser.uid : null,
     auth,
     cloud: cloudSync,
     pendingMerge: null,
