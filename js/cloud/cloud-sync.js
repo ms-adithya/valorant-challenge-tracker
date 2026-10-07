@@ -18,7 +18,9 @@
   }
 
   function _isCurrentSession(token, uid = activeUid) {
-    return Boolean(token) && token === currentSessionToken && uid === activeUid;
+    const vct = typeof window !== "undefined" ? window.VCT : null;
+    return Boolean(token) && token === currentSessionToken && uid === activeUid &&
+      (!vct || !vct.uid || vct.uid === uid);
   }
 
   function userRoot(uid) {
@@ -146,7 +148,9 @@
   async function pushChanges() {
     const VCT = typeof window !== "undefined" ? window.VCT : null;
     if (!VCT || !VCT.uid || !VCT.fx) return;
-    if (VCT.uid !== activeUid) return;
+    const sessionToken = currentSessionToken;
+    const sessionUid = VCT.uid;
+    if (!_isCurrentSession(sessionToken, sessionUid)) return;
     // Never write before the first snapshot lands, or an empty local state
     // would diff into a full delete of everything on the server.
     if (!hydrated) return;
@@ -184,6 +188,7 @@
 
       const { fx, db, uid } = VCT;
       for (const part of chunkChangesByOperations(changes, deletedChallenges, tombstones, 400)) {
+        if (!_isCurrentSession(sessionToken, sessionUid)) return;
         const batch = fx.writeBatch(db);
         const challengesToTouch = new Set();
         const tombstoneUpdates = {};
@@ -243,7 +248,9 @@
         }
 
         await batch.commit();
+        if (!_isCurrentSession(sessionToken, sessionUid)) return;
       }
+      if (!_isCurrentSession(sessionToken, sessionUid)) return;
       lastSyncedSnapshot = next;
     } catch (err) {
       // A failed push is recoverable: lastSyncedSnapshot is not advanced, so
@@ -300,22 +307,26 @@
       } catch (err) {
         console.warn("VCT: profile document update failed", err);
       }
+      if (!_isCurrentSession(sessionToken, uid)) return;
     }
 
     // Subscribe to durable tombstones
     // Fetch initial tombstones before attaching challenge listener to eliminate race condition
     const tombstonesRef = fx.doc(db, "users", uid, "meta", "tombstones");
+    let initialTombstones = {};
     try {
       const initSnap = await fx.getDoc(tombstonesRef);
       if (initSnap && initSnap.exists()) {
-        tombstones = initSnap.data() || {};
+        initialTombstones = initSnap.data() || {};
       }
     } catch (err) {
       console.warn("VCT: initial tombstones fetch failed", err);
     }
+    if (!_isCurrentSession(sessionToken, uid)) return;
+    tombstones = initialTombstones;
 
     // Subscribe to durable tombstones for subsequent out-of-band updates
-    unsubTombstones = fx.onSnapshot(tombstonesRef, (snap) => {
+    const stopTombstones = fx.onSnapshot(tombstonesRef, (snap) => {
       if (!snap || !snap.exists()) return;
       if (!_isCurrentSession(sessionToken, uid)) return;
       const previous = tombstones || {};
@@ -334,10 +345,15 @@
         rehydrate(filteredEntries, filteredByChallenge);
       }
     }, (err) => console.warn("VCT: tombstones subscription failed", err));
+    if (!_isCurrentSession(sessionToken, uid)) {
+      try { stopTombstones(); } catch (_) {}
+      return;
+    }
+    unsubTombstones = stopTombstones;
 
     let latestSnapshotSeq = 0;
     const challengesRef = fx.collection(db, "users", uid, "challenges");
-    unsubChallenges = fx.onSnapshot(challengesRef, async (snap) => {
+    const stopChallenges = fx.onSnapshot(challengesRef, async (snap) => {
       if (!_isCurrentSession(sessionToken, uid)) return;
       const seq = ++latestSnapshotSeq;
       lastRawEntries = snap.docs.map((d) => ({ id: d.id, doc: d.data() }));
@@ -355,6 +371,11 @@
       lastRawByChallenge = byChallenge;
       rehydrate(entries, byChallenge);
     }, (err) => console.error("VCT: challenge subscription failed", err));
+    if (!_isCurrentSession(sessionToken, uid)) {
+      try { stopChallenges(); } catch (_) {}
+      return;
+    }
+    unsubChallenges = stopChallenges;
   }
 
   function stop() {
@@ -537,6 +558,10 @@
   if (typeof module !== "undefined" && module.exports) {
     api._getSessionGeneration = _getSessionGeneration;
     api._isCurrentSession = _isCurrentSession;
+    api._setActiveUidForTests = (uid) => {
+      currentSessionToken += 1;
+      activeUid = uid;
+    };
     api._setLastSyncedSnapshot = (snap) => { lastSyncedSnapshot = snap; };
     api._setHydrated = (val) => { hydrated = val; };
     api._setTombstones = (t) => { tombstones = t; };
