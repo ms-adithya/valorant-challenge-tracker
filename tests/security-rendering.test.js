@@ -29,7 +29,7 @@ const hostile = '<img src=x onerror=alert(1)> </div> " \' ` onclick= javascript:
 
 test('challenge archive renders attacker-controlled values as inert text', () => {
   global.activeChallenges = [{
-    id: 'challenge-1',
+    id: '&apos;);alert(1);//',
     name: hostile,
     matches: [],
     startRank: hostile,
@@ -46,6 +46,8 @@ test('challenge archive renders attacker-controlled values as inert text', () =>
   const html = global.$('challengeArchive').innerHTML;
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html, /<img[^>]*onerror/i);
+  assert.match(html, /onclick="[^"]*&amp;apos;\);alert\(1\);\/\/[^"]*"/);
+  assert.doesNotMatch(html, /onclick="[^"]*&apos;/);
 });
 
 test('analytics labels are escaped in agent, distribution, and win-bar output', () => {

@@ -1133,6 +1133,7 @@ test("dom utils: escapeJsSingleQuoted escapes single and double quotes to preven
   assert.strictEqual(escapeJsSingleQuoted("normal"), "normal");
   assert.strictEqual(escapeJsSingleQuoted("it's"), "it\\'s");
   assert.strictEqual(escapeJsSingleQuoted('ch"onclick="alert(1)'), 'ch&quot;onclick=&quot;alert(1)');
+  assert.strictEqual(escapeJsSingleQuoted("&apos;);alert(1);//"), "&amp;apos;);alert(1);//");
   assert.strictEqual(escapeJsSingleQuoted("multi\nline\rtext"), "multi\\nline\\rtext");
 
   // Verify escapeHtml behaves as expected
