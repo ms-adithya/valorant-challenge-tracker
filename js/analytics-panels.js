@@ -17,7 +17,7 @@ function renderRolePanel(){
 }
 function renderTopAgents(){
  const el=$("topAgentsTable");if(!el)return;const rows=summariesByAgent();if(!rows.length){el.innerHTML='<div class="empty">No agent data yet.</div>';return}
- el.innerHTML=`<div class="agent-table-head"><span>Agent</span><span>Matches</span><span>Win %</span><span>K/D</span><span>ADR</span><span>ACS</span><span>DDΔ</span><span>Best map</span></div>${rows.map((x,i)=>{const b=x.best,bwr=b?b[1].w/b[1].m*100:0;return `<div class="agent-table-row ${i===0?"featured":""}"><div class="agent-name-cell"><div class="agent-portrait-fallback">${x.agent.slice(0,2).toUpperCase()}</div><div><b>${x.agent}</b><small>${x.m} match${x.m===1?"":"es"}</small></div></div><b>${x.m}</b><b>${x.wr.toFixed(1)}%</b><b>${x.kd.toFixed(2)}</b><b>${x.adrA==null?"—":x.adrA.toFixed(1)}</b><b>${x.acsA==null?"—":x.acsA.toFixed(1)}</b><b class="${(x.ddaA||0)>=0?"pos":"neg"}">${x.ddaA==null?"—":`${x.ddaA>=0?"+":""}${x.ddaA.toFixed(1)}`}</b><div class="best-map"><b>${b?b[0]:"—"}</b><small>${b?`${bwr.toFixed(0)}% WR`:""}</small></div></div>`}).join("")}`;
+ el.innerHTML=`<div class="agent-table-head"><span>Agent</span><span>Matches</span><span>Win %</span><span>K/D</span><span>ADR</span><span>ACS</span><span>DDΔ</span><span>Best map</span></div>${rows.map((x,i)=>{const b=x.best,bwr=b?b[1].w/b[1].m*100:0;const safeAgent=escapeHtml(x.agent||"Unknown");const safeBest=b?escapeHtml(String(b[0])):"—";return `<div class="agent-table-row ${i===0?"featured":""}"><div class="agent-name-cell"><div class="agent-portrait-fallback">${escapeHtml(String(x.agent||"Unknown").slice(0,2).toUpperCase())}</div><div><b>${safeAgent}</b><small>${x.m} match${x.m===1?"":"es"}</small></div></div><b>${x.m}</b><b>${x.wr.toFixed(1)}%</b><b>${x.kd.toFixed(2)}</b><b>${x.adrA==null?"—":x.adrA.toFixed(1)}</b><b>${x.acsA==null?"—":x.acsA.toFixed(1)}</b><b class="${(x.ddaA||0)>=0?"pos":"neg"}">${x.ddaA==null?"—":`${x.ddaA>=0?"+":""}${x.ddaA.toFixed(1)}`}</b><div class="best-map"><b>${safeBest}</b><small>${b?`${bwr.toFixed(0)}% WR`:""}</small></div></div>`}).join("")}`;
 }
 function renderAnalyticsStrip(){
  const el=$("analyticsStrip");if(!el)return;const ms=analyticsMatches();
@@ -32,13 +32,13 @@ function renderDist(key,id){
  const scope=analyticsMatches(),c={};scope.forEach(m=>c[m[key]]=(c[m[key]]||0)+1);const total=scope.length||1,arr=Object.entries(c).sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0])));
  if(!arr.length){$(id).innerHTML='<div class="empty">No data yet.</div>';return}
  const cls=key==="agent"?"agent":"map";
- $(id).innerHTML=arr.map(([n,v])=>{const mark=key==="agent"?n.slice(0,2).toUpperCase():n[0].toUpperCase(),matches=scope.filter(m=>m[key]===n),wins=matches.filter(m=>m.result==="Win").length,wr=wins/matches.length*100;return `<div class="${cls}-card"><div class="${cls}-avatar">${mark}</div><div class="entity-copy"><b>${n}</b><span>${v} match${v===1?"":"es"} · ${(v/total*100).toFixed(0)}% usage</span></div><div class="entity-metric"><b>${wr.toFixed(0)}%</b><span>WIN RATE</span></div></div>`}).join("");
+ $(id).innerHTML=arr.map(([n,v])=>{const safeName=escapeHtml(String(n));const mark=key==="agent"?String(n).slice(0,2).toUpperCase():String(n)[0].toUpperCase(),matches=scope.filter(m=>m[key]===n),wins=matches.filter(m=>m.result==="Win").length,wr=wins/matches.length*100;return `<div class="${cls}-card"><div class="${cls}-avatar">${escapeHtml(mark)}</div><div class="entity-copy"><b>${safeName}</b><span>${v} match${v===1?"":"es"} · ${(v/total*100).toFixed(0)}% usage</span></div><div class="entity-metric"><b>${wr.toFixed(0)}%</b><span>WIN RATE</span></div></div>`}).join("");
 }
 
 function renderWinBars(key,id){
  const groups={};analyticsMatches().forEach(m=>{groups[m[key]]??={n:0,w:0};groups[m[key]].n++;if(m.result==="Win")groups[m[key]].w++});
  const arr=Object.entries(groups).map(([name,v])=>[name,v.n,v.w/v.n*100]).sort((a,b)=>b[2]-a[2]);
- $(id).innerHTML=arr.length?arr.map(([n,count,wr])=>`<div class="hbar"><span class="hbar-name" title="${n}">${n}</span><div class="hbar-track"><div class="hbar-fill" style="width:${wr}%"></div></div><span class="hbar-value">${wr.toFixed(0)}% <small>(${count})</small></span></div>`).join(""):'<div class="empty">No data yet.</div>';
+ $(id).innerHTML=arr.length?arr.map(([n,count,wr])=>`<div class="hbar"><span class="hbar-name" title="${escapeHtml(String(n))}">${escapeHtml(String(n))}</span><div class="hbar-track"><div class="hbar-fill" style="width:${wr}%"></div></div><span class="hbar-value">${wr.toFixed(0)}% <small>(${count})</small></span></div>`).join(""):'<div class="empty">No data yet.</div>';
 }
 
 function renderComparison(){
@@ -46,5 +46,19 @@ function renderComparison(){
  const first=ms.slice(0,Math.min(5,ms.length)),last=ms.slice(-Math.min(5,ms.length));
  const av=(arr,key)=>{const vals=arr.map(m=>key==="kd"?((m.kills==null||m.deaths==null)?null:(Number(m.deaths)?Number(m.kills)/Number(m.deaths):Number(m.kills))):optionalNumber(m[key])).filter(Number.isFinite);return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null};
  const metrics=[["K/D","kd",2],["ACS","acs",0],["ADR","adr",0],["DDΔ","ddDelta",1],["KAST","kast",1],["HS","hs",1]];
- $("comparison").innerHTML=metrics.map(([label,key,dp])=>{const a=av(first,key),b=av(last,key),suffix=["kast","hs"].includes(key)?"%":"";if(a===null||b===null)return `<div class="compare"><span>${label}</span><b>—</b><small class="delta-flat">Not enough recorded data</small></div>`;const d=b-a,cls=d>.001?"delta-up":d<-.001?"delta-down":"delta-flat";return `<div class="compare"><span>${label}</span><b>${b.toFixed(dp)}${suffix}</b><small class="${cls}">${d>=0?"+":""}${d.toFixed(dp)}${suffix} vs first ${first.length}</small></div>`}).join("");
+ $("comparison").innerHTML=metrics.map(([label,key,dp])=>{const a=av(first,key),b=av(last,key),suffix=["kast","hs"].includes(key)?"%":"";if(a===null||b===null)return `<div class="compare"><span>${escapeHtml(String(label))}</span><b>—</b><small class="delta-flat">Not enough recorded data</small></div>`;const d=b-a,cls=d>.001?"delta-up":d<-.001?"delta-down":"delta-flat";return `<div class="compare"><span>${escapeHtml(String(label))}</span><b>${b.toFixed(dp)}${suffix}</b><small class="${cls}">${d>=0?"+":""}${d.toFixed(dp)}${suffix} vs first ${first.length}</small></div>`}).join("");
+}
+
+if(typeof module!=="undefined"&&module.exports){
+ module.exports={
+  finiteVals,
+  summariesByAgent,
+  renderAccuracyPanel,
+  renderRolePanel,
+  renderTopAgents,
+  renderAnalyticsStrip,
+  renderDist,
+  renderWinBars,
+  renderComparison,
+ };
 }

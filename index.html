@@ -565,7 +565,8 @@
    if(!rows.length){host.innerHTML='<div class="map-rank-row"><div class="map-rank">—</div><div><div class="map-name">No map data yet</div><div class="map-sub">Add matches to build map rankings.</div></div></div>';return}
    host.innerHTML=(expanded?rows:rows.slice(0,7)).map((z,i)=>{
      const cls=z.wr>=60?"good":z.wr>=45?"mid":"low";
-     return `<div class="map-rank-row"><div class="map-rank">#${i+1}</div><div><div class="map-name">${z.name}</div><div class="map-sub">${z.m} match${z.m===1?"":"es"}</div></div><div class="map-stat"><div class="map-wr ${cls}">${z.wr.toFixed(1)}%</div><div class="map-record">${z.w}W · ${z.l}L${z.d?` · ${z.d}D`:""}</div></div></div>`;
+     const safeName=escapeHtml(String(z.name));
+     return `<div class="map-rank-row"><div class="map-rank">#${i+1}</div><div><div class="map-name">${safeName}</div><div class="map-sub">${z.m} match${z.m===1?"":"es"}</div></div><div class="map-stat"><div class="map-wr ${cls}">${z.wr.toFixed(1)}%</div><div class="map-record">${z.w}W · ${z.l}L${z.d?` · ${z.d}D`:""}</div></div></div>`;
    }).join("");
    const b=$("toggle-all-maps"); if(b){b.hidden=rows.length<=7;b.textContent=expanded?"Show top maps":"View all maps"}
  }

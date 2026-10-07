@@ -37,24 +37,25 @@ function rebuildPendingImport(){
  pendingMatchImport=assignments.map(a=>checkedByRow.get(a.row));
  renderImportPreview();
 }
-function renderImportPreview(){
- const valid=pendingMatchImport.filter(x=>!x.errors.length).length,invalid=pendingMatchImport.length-valid;
- const bulk=pendingMatchImport.length>1;
- const ordered=[...pendingMatchImport].sort((a,b)=>{
+function renderImportPreview(items=pendingMatchImport){
+ const valid=items.filter(x=>!x.errors.length).length,invalid=items.length-valid;
+ const bulk=items.length>1;
+ const ordered=[...items].sort((a,b)=>{
   const ae=a.errors.length?1:0,be=b.errors.length?1:0;
   return ae-be || (a.assignment?.row||0)-(b.assignment?.row||0);
  });
  const visible=ordered.filter(x=>importReviewFilter==="ready"?!x.errors.length:importReviewFilter==="attention"?x.errors.length:true);
- $("importMatchesSummary").innerHTML=`<div class="import-stat"><span>Rows</span><b>${pendingMatchImport.length}</b></div><div class="import-stat good"><span>Ready</span><b>${valid}</b></div><div class="import-stat bad"><span>Attention</span><b>${invalid}</b></div>${bulk?`<label class="import-ready-only"><input id="importReadyOnly" type="checkbox" checked> <span><b>Import ready rows only</b><small>Valid rows will be saved; invalid rows will be skipped.</small></span></label><div class="import-review-filters" role="group" aria-label="Filter import review"><button type="button" data-import-filter="all" class="${importReviewFilter==="all"?"active":""}">All <b>${pendingMatchImport.length}</b></button><button type="button" data-import-filter="ready" class="${importReviewFilter==="ready"?"active":""}">Ready <b>${valid}</b></button><button type="button" data-import-filter="attention" class="${importReviewFilter==="attention"?"active":""}">Needs attention <b>${invalid}</b></button></div>`:""}`;
+ $("importMatchesSummary").innerHTML=`<div class="import-stat"><span>Rows</span><b>${items.length}</b></div><div class="import-stat good"><span>Ready</span><b>${valid}</b></div><div class="import-stat bad"><span>Attention</span><b>${invalid}</b></div>${bulk?`<label class="import-ready-only"><input id="importReadyOnly" type="checkbox" checked> <span><b>Import ready rows only</b><small>Valid rows will be saved; invalid rows will be skipped.</small></span></label><div class="import-review-filters" role="group" aria-label="Filter import review"><button type="button" data-import-filter="all" class="${importReviewFilter==="all"?"active":""}">All <b>${items.length}</b></button><button type="button" data-import-filter="ready" class="${importReviewFilter==="ready"?"active":""}">Ready <b>${valid}</b></button><button type="button" data-import-filter="attention" class="${importReviewFilter==="attention"?"active":""}">Needs attention <b>${invalid}</b></button></div>`:""}`;
  $("importMatchesPreview").innerHTML=visible.length?visible.map(x=>{
   const a=x.assignment||{};const sourceIndex=Math.max(0,(a.row||1)-1);const changed=a.requested!==a.assigned;
-  const numberNote=changed?`<span class="import-meta reassign">#${a.requested??"?"} → #${a.assigned}<em>${a.reason}</em></span>`:`<span class="import-meta">Match #${a.assigned}<em>number preserved</em></span>`;
-  const rankNote=x.rankStatusAdjusted?`<span class="import-meta">${x.rankStatusAdjusted}<em>rank status derived automatically</em></span>`:"";
+  const numberNote=changed?`<span class="import-meta reassign">#${a.requested??"?"} → #${a.assigned}<em>${escapeHtml(String(a.reason||""))}</em></span>`:`<span class="import-meta">Match #${a.assigned}<em>number preserved</em></span>`;
+  const rankNote=x.rankStatusAdjusted?`<span class="import-meta">${escapeHtml(String(x.rankStatusAdjusted))}<em>rank status derived automatically</em></span>`:"";
   const rr=Number.isFinite(x.match.rrChange)?`${x.match.rrChange>=0?"+":""}${x.match.rrChange} RR`:"RR —";
   const score=`${Number.isFinite(x.match.myScore)?x.match.myScore:"?"}–${Number.isFinite(x.match.enemyScore)?x.match.enemyScore:"?"}`;
+  const result=["Win","Loss","Draw"].includes(x.match.result)?x.match.result:"";
   return `<article class="import-row ${x.errors.length?"bad":"ok"}">
    <div class="import-row-index"><span>Row ${a.row||sourceIndex+1}</span><label class="import-number-field"><small>Match #</small><input class="import-no-edit" type="number" min="1" step="1" value="${a.assigned}" data-import-no="${sourceIndex}" aria-label="Match number for import row ${a.row||sourceIndex+1}"></label></div>
-   <div class="import-row-main"><div class="import-row-title"><b>${x.match.agent||"Unknown agent"} <i>·</i> ${x.match.map||"Unknown map"}</b><span class="result-pill ${(x.match.result||"").toLowerCase()}">${x.match.result||"No result"}</span></div><div class="import-meta-line">${numberNote}${rankNote}</div><small class="import-match-line">${score} · ${x.match.rankAfter||"No rank"} · ${rr}</small>${x.errors.length?`<ul class="import-errors">${x.errors.map(e=>`<li>${e}</li>`).join("")}</ul>`:""}</div>
+   <div class="import-row-main"><div class="import-row-title"><b>${escapeHtml(String(x.match.agent||"Unknown agent"))} <i>·</i> ${escapeHtml(String(x.match.map||"Unknown map"))}</b><span class="result-pill ${result.toLowerCase()}">${escapeHtml(result||"No result")}</span></div><div class="import-meta-line">${numberNote}${rankNote}</div><small class="import-match-line">${score} · ${escapeHtml(String(x.match.rankAfter||"No rank"))} · ${rr}</small>${x.errors.length?`<ul class="import-errors">${x.errors.map(e=>`<li>${escapeHtml(String(e))}</li>`).join("")}</ul>`:""}</div>
    <div class="import-status"><span>${x.errors.length?"Needs attention":"Ready"}</span></div></article>`;
  }).join(""):`<div class="import-help">No ${importReviewFilter==="ready"?"ready":importReviewFilter==="attention"?"problem":"match"} rows in this import.</div>`;
  $("confirmImportMatchesBtn").disabled=false;
@@ -83,6 +84,7 @@ if(typeof document!=="undefined"){
 if(typeof module!=="undefined"&&module.exports){
  module.exports={
   nextUnusedMatchNo,
-  assignImportNumbers
+  assignImportNumbers,
+  renderImportPreview,
  };
 }
