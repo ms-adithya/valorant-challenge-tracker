@@ -1182,7 +1182,7 @@ test("cloud sync batch: deleting challenge with multiple matches deletes all doc
   };
 
   global.window = {
-    VCT: { fx: mockFx, db: {}, uid: "alice" },
+    VCT: { fx: mockFx, db: {}, uid: "alice", auth: { currentUser: { uid: "alice" } } },
     buildSnapshot,
     diffSnapshots,
     chunk,
@@ -1270,7 +1270,7 @@ test("cloud sync batching A: 300 distributed match updates across 300 challenges
   };
 
   global.window = {
-    VCT: { fx: mockFx, db: {}, uid: "alice" },
+    VCT: { fx: mockFx, db: {}, uid: "alice", auth: { currentUser: { uid: "alice" } } },
     buildSnapshot,
     diffSnapshots,
   };

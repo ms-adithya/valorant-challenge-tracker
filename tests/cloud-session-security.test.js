@@ -48,7 +48,7 @@ function createHarness() {
     serverTimestamp: () => 'server-time',
   };
 
-  const vct = { fx, db: {}, uid: null, auth: null };
+  const vct = { fx, db: {}, uid: null, auth: { currentUser: null } };
   global.window = {
     VCT: vct,
     buildSnapshot: () => ({ challenges: { c1: {} }, matches: {} }),
@@ -77,10 +77,12 @@ test('startup abandoned during profile write cannot fetch or attach listeners', 
 
   try {
     harness.vct.uid = 'uid-a';
+    harness.vct.auth.currentUser = { uid: 'uid-a' };
     const oldStart = cloud.start('uid-a');
     await profileStarted.promise;
 
     harness.vct.uid = 'uid-b';
+    harness.vct.auth.currentUser = { uid: 'uid-b' };
     await cloud.start('uid-b');
     finishProfile.resolve();
     await oldStart;
@@ -114,10 +116,12 @@ test('startup abandoned during tombstone fetch cannot replace active state or li
 
   try {
     harness.vct.uid = 'uid-a';
+    harness.vct.auth.currentUser = { uid: 'uid-a' };
     const oldStart = cloud.start('uid-a');
     await tombstonesStarted.promise;
 
     harness.vct.uid = 'uid-b';
+    harness.vct.auth.currentUser = { uid: 'uid-b' };
     await cloud.start('uid-b');
     finishTombstones.resolve();
     await oldStart;
@@ -141,10 +145,12 @@ test('callbacks from a prior session cannot mutate current tombstones or fetch m
 
   try {
     harness.vct.uid = 'uid-a';
+    harness.vct.auth.currentUser = { uid: 'uid-a' };
     await cloud.start('uid-a');
     const oldListeners = harness.listeners.slice();
 
     harness.vct.uid = 'uid-b';
+    harness.vct.auth.currentUser = { uid: 'uid-b' };
     await cloud.start('uid-b');
     oldListeners.find(({ ref }) => ref.includes('meta/tombstones')).callback({
       exists: () => true,
@@ -154,6 +160,35 @@ test('callbacks from a prior session cannot mutate current tombstones or fetch m
       docs: [{ id: 'c_stale', data: () => ({ name: 'Stale' }) }],
     });
 
+    assert.deepStrictEqual(cloud.tombstones, {});
+    assert.deepStrictEqual(harness.getDocsCalls, []);
+  } finally {
+    cloud.stop();
+    global.window = previousWindow;
+  }
+});
+
+test('callbacks are rejected after cross-tab sign-out before VCT.uid is cleared', async () => {
+  const previousWindow = global.window;
+  cloud.stop();
+  const harness = createHarness();
+
+  try {
+    harness.vct.uid = 'uid-a';
+    harness.vct.auth.currentUser = { uid: 'uid-a' };
+    await cloud.start('uid-a');
+    const oldListeners = harness.listeners.slice();
+
+    harness.vct.auth.currentUser = null;
+    oldListeners.find(({ ref }) => ref.includes('meta/tombstones')).callback({
+      exists: () => true,
+      data: () => ({ c_stale: true }),
+    });
+    await oldListeners.find(({ ref }) => ref.endsWith('/challenges')).callback({
+      docs: [{ id: 'c_stale', data: () => ({ name: 'Stale' }) }],
+    });
+
+    assert.strictEqual(harness.vct.uid, 'uid-a');
     assert.deepStrictEqual(cloud.tombstones, {});
     assert.deepStrictEqual(harness.getDocsCalls, []);
   } finally {
@@ -175,6 +210,7 @@ test('a push completing after a session switch cannot advance the new session ba
 
   try {
     harness.vct.uid = 'uid-a';
+    harness.vct.auth.currentUser = { uid: 'uid-a' };
     await cloud.start('uid-a');
     cloud._setHydrated(true);
     cloud._setLastSyncedSnapshot({ challenges: {}, matches: {} });
@@ -183,6 +219,7 @@ test('a push completing after a session switch cannot advance the new session ba
     await commitStarted.promise;
 
     harness.vct.uid = 'uid-b';
+    harness.vct.auth.currentUser = { uid: 'uid-b' };
     await cloud.start('uid-b');
     assert.deepStrictEqual(cloud.lastSyncedSnapshot, { challenges: {}, matches: {} });
 

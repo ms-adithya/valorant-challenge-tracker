@@ -20,7 +20,8 @@
   function _isCurrentSession(token, uid = activeUid) {
     const vct = typeof window !== "undefined" ? window.VCT : null;
     return Boolean(token) && token === currentSessionToken && uid === activeUid &&
-      (!vct || !vct.uid || vct.uid === uid);
+      Boolean(vct && vct.uid === uid && vct.auth &&
+        vct.auth.currentUser && vct.auth.currentUser.uid === uid);
   }
 
   function userRoot(uid) {
