@@ -168,6 +168,54 @@ test('callbacks from a prior session cannot mutate current tombstones or fetch m
   }
 });
 
+test('a match fetch finishing after an account switch cannot rehydrate the new session', async () => {
+  const previousWindow = global.window;
+  cloud.stop();
+  const harness = createHarness();
+  const fetchStarted = deferred();
+  const finishFetch = deferred();
+  harness.getDocs = async (ref) => {
+    if (ref.includes('uid-a')) {
+      fetchStarted.resolve();
+      return finishFetch.promise;
+    }
+    return { docs: [] };
+  };
+  let applyCalls = 0;
+  const userBState = { id: 'uid-b-local' };
+  global.window.applyDocuments = () => {
+    applyCalls += 1;
+    return { data: userBState, activeChallenges: [userBState], archives: [] };
+  };
+  global.window.data = userBState;
+  global.window.activeChallenges = [userBState];
+  global.window.archives = [];
+
+  try {
+    harness.vct.uid = 'uid-a';
+    harness.vct.auth.currentUser = { uid: 'uid-a' };
+    await cloud.start('uid-a');
+    const challengeListener = harness.listeners.find(({ ref }) => ref.endsWith('/challenges'));
+    const inFlightCallback = challengeListener.callback({
+      docs: [{ id: 'c_stale', data: () => ({ name: 'Stale' }) }],
+    });
+    await fetchStarted.promise;
+
+    harness.vct.uid = 'uid-b';
+    harness.vct.auth.currentUser = { uid: 'uid-b' };
+    await cloud.start('uid-b');
+    finishFetch.resolve({ docs: [{ id: 'm_stale', data: () => ({ agent: 'Jett' }) }] });
+    await inFlightCallback;
+
+    assert.strictEqual(applyCalls, 0);
+    assert.strictEqual(global.window.data, userBState);
+    assert.strictEqual(global.window.activeChallenges[0], userBState);
+  } finally {
+    cloud.stop();
+    global.window = previousWindow;
+  }
+});
+
 test('callbacks are rejected after cross-tab sign-out before VCT.uid is cleared', async () => {
   const previousWindow = global.window;
   cloud.stop();
