@@ -77,7 +77,7 @@ test('analytics labels are escaped in agent, distribution, and win-bar output', 
 
 test('top-map renderer escapes attacker-controlled map names', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const script = [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
+  const script = [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/gi)]
     .map((match) => match[1])
     .find((content) => content.includes('window.renderTopMaps=render;'));
   assert.ok(script, 'top-map renderer script should be present');
