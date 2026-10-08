@@ -18,6 +18,7 @@ async function readMatchImportFile(file){
    else if(Array.isArray(parsed.matches))objects=parsed.matches;
    else if(Array.isArray(parsed.activeChallenge?.matches))objects=parsed.activeChallenge.matches;
    else throw new Error("No matches array found");
+    checkImportRowCount(objects.length);
      const rows=objects.map(object=>object&&typeof object==="object"&&!Array.isArray(object)?Object.values(object):[object]);
      checkImportBounds(rows,textSize);
   }else{

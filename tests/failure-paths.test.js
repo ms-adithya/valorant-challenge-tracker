@@ -1087,6 +1087,11 @@ test("import stress tests: reject oversized CSV rows and fields", () => {
 
   const longField = "Y".repeat(4001);
   assert.throws(() => parseDelimited(`agent,map,result,score\nJett,Ascent,Win,${longField}\n`, ","), /field exceeds/i);
+
+  const maxRows = 5000;
+  const withinRowLimit = `header\n${"row\n".repeat(maxRows - 1)}`;
+  assert.strictEqual(parseDelimited(withinRowLimit, ",").length, maxRows);
+  assert.throws(() => parseDelimited(`${withinRowLimit}overflow\n`, ","), /row count exceeds/i);
 });
 
 test("analytics matrix: cap output and aggregate match stats with bounded field reads", () => {
@@ -1108,6 +1113,7 @@ test("analytics matrix: cap output and aggregate match stats with bounded field 
   renderMatrix();
   assert.match(matrixElement.innerHTML, /Showing first 12/i);
   assert.doesNotMatch(matrixElement.innerHTML, /Agent 13/);
+  assert.match(matrixElement.innerHTML, /<b>Agent 1<\/b><div class="cell qualified-combo"><strong>50% WR<\/strong><span>40M · 2\.00 KD<\/span>/);
   assert.ok(agentReads <= matchCount * 3, `agent fields read ${agentReads} times`);
   assert.ok(mapReads <= matchCount * 3, `map fields read ${mapReads} times`);
 });

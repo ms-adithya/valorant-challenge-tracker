@@ -13,9 +13,7 @@ function checkImportBounds(rows, textLength){
   if (typeof textLength === "number" && textLength > IMPORT_LIMITS.maxFileBytes) {
     throw new Error(`Import file is too large: ${textLength} bytes exceeds the ${IMPORT_LIMITS.maxFileBytes} byte limit.`);
   }
-  if (rows.length > IMPORT_LIMITS.maxRows) {
-    throw new Error(`Import row count exceeds the ${IMPORT_LIMITS.maxRows} row limit.`);
-  }
+  checkImportRowCount(rows.length);
   const overWide = rows.find((row) => row.length > IMPORT_LIMITS.maxColumns);
   if (overWide) {
     throw new Error(`Import column count exceeds the ${IMPORT_LIMITS.maxColumns} column limit.`);
@@ -30,6 +28,12 @@ function checkImportBounds(rows, textLength){
   }
 }
 
+function checkImportRowCount(rowCount){
+  if (rowCount > IMPORT_LIMITS.maxRows) {
+    throw new Error(`Import row count exceeds the ${IMPORT_LIMITS.maxRows} row limit.`);
+  }
+}
+
 function importTextByteLength(text){
  return new TextEncoder().encode(text).byteLength;
 }
@@ -41,21 +45,39 @@ function parseDelimited(text,delimiter=","){
    throw new Error(`Import file is too large: ${size} bytes exceeds the ${IMPORT_LIMITS.maxFileBytes} byte limit.`);
  }
  const rows=[];let row=[],cell="",quoted=false;
+ const appendCell=value=>{
+  if(cell.length+value.length>IMPORT_LIMITS.maxFieldLength){
+   throw new Error(`Import field exceeds the ${IMPORT_LIMITS.maxFieldLength} character field limit.`);
+  }
+  cell+=value;
+ };
+ const pushCell=()=>{
+  if(row.length>=IMPORT_LIMITS.maxColumns){
+   throw new Error(`Import column count exceeds the ${IMPORT_LIMITS.maxColumns} column limit.`);
+  }
+  row.push(cell);cell="";
+ };
+ const pushRow=()=>{
+  if(row.some(v=>String(v).trim()!=="")){
+   if(rows.length>=IMPORT_LIMITS.maxRows){
+    throw new Error(`Import row count exceeds the ${IMPORT_LIMITS.maxRows} row limit.`);
+   }
+   rows.push(row);
+  }
+  row=[];
+ };
  for(let i=0;i<text.length;i++){
   const ch=text[i],next=text[i+1];
-  if(ch==='"'&&quoted&&next==='"'){cell+='"';i++;continue}
+  if(ch==='"'&&quoted&&next==='"'){appendCell('"');i++;continue}
   if(ch==='"'){quoted=!quoted;continue}
-  if(ch===delimiter&&!quoted){row.push(cell);cell="";continue}
+  if(ch===delimiter&&!quoted){pushCell();continue}
   if((ch==="\n"||ch==="\r")&&!quoted){
    if(ch==="\r"&&next==="\n")i++;
-   row.push(cell);cell="";
-   if(row.some(v=>String(v).trim()!==""))rows.push(row);
-   row=[];continue
+   pushCell();pushRow();continue
   }
-  cell+=ch;
+  appendCell(ch);
  }
- row.push(cell);if(row.some(v=>String(v).trim()!==""))rows.push(row);
- checkImportBounds(rows, size);
+ pushCell();pushRow();
  return rows;
 }
 function normHeader(v){return String(v||"").toLowerCase().replace(/[%Δ]/g,m=>m==="%"?"percent":"delta").replace(/[^a-z0-9]+/g,"").trim()}
