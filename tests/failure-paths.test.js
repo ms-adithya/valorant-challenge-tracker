@@ -1065,6 +1065,53 @@ test("import parsing: parseDelimited and normaliseImportedObject correctly parse
   assert.strictEqual(norm.rankAfter, "Bronze 1");
 });
 
+test("import validation: rejects score strings beyond the configured length limit", () => {
+  const tooLongScore = `${"9".repeat(25)}-0`;
+  const normalised = normaliseImportedObject({ score: tooLongScore });
+  const res = validateImportedMatch({
+    agent: "Jett",
+    map: "Ascent",
+    result: "Win",
+    score: tooLongScore,
+    rankAfter: "Gold 1",
+    rounds: 23,
+  }, { rankAfter: "Gold 1" }, 1);
+
+  assert.strictEqual(normalised.myScore, undefined);
+  assert.ok(res.errors.some((error) => /Score value exceeds the/.test(error)));
+});
+
+test("import stress tests: reject oversized CSV rows and fields", () => {
+  const wideRow = Array.from({ length: 101 }, () => "X").join(",");
+  assert.throws(() => parseDelimited(wideRow, ","), /column count exceeds/i);
+
+  const longField = "Y".repeat(4001);
+  assert.throws(() => parseDelimited(`agent,map,result,score\nJett,Ascent,Win,${longField}\n`, ","), /field exceeds/i);
+});
+
+test("analytics matrix: cap output and aggregate match stats with bounded field reads", () => {
+  const matrixElement = { innerHTML: "" };
+  const matchCount = 600;
+  let agentReads = 0;
+  let mapReads = 0;
+  global.$ = (id) => (id === "matrix" ? matrixElement : { innerHTML: "", classList: { contains() { return false; } } });
+  global.analyticsMatches = () => Array.from({ length: matchCount }, (_, i) => ({
+    get agent() { agentReads++; return `Agent ${(i % 15) + 1}`; },
+    get map() { mapReads++; return `Map ${(i % 15) + 1}`; },
+    result: i % 2 === 0 ? "Win" : "Loss",
+    kills: 10,
+    deaths: 5,
+    no: i + 1,
+  }));
+
+  const { renderMatrix } = require("../js/analytics-insights.js");
+  renderMatrix();
+  assert.match(matrixElement.innerHTML, /Showing first 12/i);
+  assert.doesNotMatch(matrixElement.innerHTML, /Agent 13/);
+  assert.ok(agentReads <= matchCount * 3, `agent fields read ${agentReads} times`);
+  assert.ok(mapReads <= matchCount * 3, `map fields read ${mapReads} times`);
+});
+
 // ---------------------------------------------------------------------------
 // 13. Match Dataset Resilience & Pagination
 // ---------------------------------------------------------------------------

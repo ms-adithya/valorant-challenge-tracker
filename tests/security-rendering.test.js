@@ -135,6 +135,78 @@ test('import preview escapes untrusted fields before commit', () => {
   assert.match(html, /<span class="result-pill ">No result<\/span>/);
 });
 
+test('JSON match import rejects oversized files before reading them', async () => {
+  const maxFileBytes = 2 * 1024 * 1024;
+  const parser = fs.readFileSync(path.join(__dirname, '..', 'js', 'import-parse.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'import-commit.js'), 'utf8');
+  const notices = [];
+  const errors = [];
+  let readCalled = false;
+  const context = {
+    $: () => null,
+    data: { matches: [] },
+    document: { addEventListener() {} },
+    showAppNotice: (message) => notices.push(message),
+    console: { error(error) { errors.push(error); } },
+    TextEncoder,
+  };
+  vm.runInNewContext(parser, context);
+  vm.runInNewContext(source, context);
+
+  await context.readMatchImportFile({
+    name: 'matches.json',
+    type: 'application/json',
+    size: maxFileBytes + 1,
+    async text() {
+      readCalled = true;
+      throw new Error('oversized file should be rejected before reading');
+    },
+  });
+
+  assert.strictEqual(readCalled, false);
+  assert.match(errors[0].message, /too large/i);
+  assert.ok(notices.length > 0);
+});
+
+test('JSON match import enforces row and field limits before preview', async () => {
+  const parser = fs.readFileSync(path.join(__dirname, '..', 'js', 'import-parse.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'import-commit.js'), 'utf8');
+  const notices = [];
+  const errors = [];
+  const previews = [];
+  const context = {
+    $: () => null,
+    data: { matches: [] },
+    document: { addEventListener() {} },
+    showAppNotice: (message) => notices.push(message),
+    buildImportPreview: (matches) => previews.push(matches),
+    console: { error(error) { errors.push(error); } },
+    TextEncoder,
+  };
+  vm.runInNewContext(parser, context);
+  vm.runInNewContext(source, context);
+  const json = JSON.stringify({ matches: Array.from({ length: 5001 }, () => ({})) });
+
+  await context.readMatchImportFile({
+    name: 'matches.json',
+    type: 'application/json',
+    size: Buffer.byteLength(json),
+    async text() { return json; },
+  });
+
+  const longFieldJson = JSON.stringify({ matches: [{ agent: 'x'.repeat(4001) }] });
+  await context.readMatchImportFile({
+    name: 'matches.json',
+    type: 'application/json',
+    size: Buffer.byteLength(longFieldJson),
+    async text() { return longFieldJson; },
+  });
+
+  assert.deepStrictEqual(previews, []);
+  assert.match(errors[0].message, /row count exceeds/i);
+  assert.match(errors[1].message, /field exceeds/i);
+});
+
 test('archive actions use data attributes instead of inline JavaScript', () => {
   global.activeChallenges = [{ id: '&apos;);alert(1);//', name: 'Test challenge', matches: [] }];
   global.archives = [];

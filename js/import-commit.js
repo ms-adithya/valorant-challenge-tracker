@@ -3,14 +3,23 @@ async function readMatchImportFile(file){
  if(!data){showAppNotice("Open a challenge before importing matches.","No active challenge");return}
  if(!file)return;
  try{
+    if(typeof file.size==="number"&&file.size>IMPORT_LIMITS.maxFileBytes){
+     throw new Error(`Import file is too large: ${file.size} bytes exceeds the ${IMPORT_LIMITS.maxFileBytes} byte limit.`);
+    }
   const text=(await file.text()).replace(/^\uFEFF/,"");
+    const textSize=importTextByteLength(text);
+    if(textSize>IMPORT_LIMITS.maxFileBytes){
+     throw new Error(`Import file is too large: ${textSize} bytes exceeds the ${IMPORT_LIMITS.maxFileBytes} byte limit.`);
+    }
   let objects=[];
-  if(file.name.toLowerCase().endsWith(".json")||file.type.includes("json")){
+    if(file.name.toLowerCase().endsWith(".json")||(file.type||"").includes("json")){
    const parsed=JSON.parse(text);
    if(Array.isArray(parsed))objects=parsed;
    else if(Array.isArray(parsed.matches))objects=parsed.matches;
    else if(Array.isArray(parsed.activeChallenge?.matches))objects=parsed.activeChallenge.matches;
    else throw new Error("No matches array found");
+     const rows=objects.map(object=>object&&typeof object==="object"&&!Array.isArray(object)?Object.values(object):[object]);
+     checkImportBounds(rows,textSize);
   }else{
    const delimiter=file.name.toLowerCase().endsWith(".tsv")?"\t":",";
    const rows=parseDelimited(text,delimiter);
