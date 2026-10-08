@@ -1,10 +1,23 @@
 // Archive browser modal, page routing and the sidebar nav wiring.
+/**
+ * Render the archive browser list with escaped values and safe delegated actions.
+ */
 function renderArchiveBrowser(){
  const list=$("archiveBrowserList");if(!list)return;
  list.innerHTML=archives.length?archives.map(c=>`<div class="archive-restore-row"><div><h3>${escapeHtml(c.name)}</h3><p>${escapeHtml(c.matches?.length ?? 0)}/${escapeHtml(c.target ?? "")} matches · ${escapeHtml(c.startRank ?? "")} → ${escapeHtml(c.targetRank||"No target")}</p></div><div class="actions"><button class="ghost" type="button" data-restore-archive="${escapeHtml(c.id)}">Unarchive</button><button class="ghost delete-archive-btn" type="button" data-archive-action="delete-archived" data-archive-id="${escapeHtml(c.id)}">Delete</button></div></div>`).join(""):'<div class="empty">No archived challenges.</div>';
 }
+/**
+ * Open the archive browser modal and refresh the rendered list.
+ */
 function openArchiveBrowser(){renderArchiveBrowser();$("archiveBrowserModal").classList.remove("hidden")}
+/**
+ * Close the archive browser modal.
+ */
 function closeArchiveBrowser(){$("archiveBrowserModal").classList.add("hidden")}
+/**
+ * Show the selected page and render any page-specific data it depends on.
+ * @param {string} id - The page identifier to display.
+ */
 function showPage(id){
  const setup=$("setup"),restore=$("setupArchiveAccess"),app=$("app"),changelog=$("changelog");
  if(id==="changelog"){
@@ -45,6 +58,10 @@ function showPage(id){
 document.querySelectorAll(".nav").forEach(btn=>{
  btn.type="button";
  btn.addEventListener("click",async e=>{e.preventDefault();showPage(btn.dataset.target)});
+});
+/**
+ * Start the new challenge flow and reset the setup view.
+ */
 async function startNewChallengeFlow(){
  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active-page"));
  document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));
@@ -67,6 +84,4 @@ if($("cancelNewChallenge"))$("cancelNewChallenge").addEventListener("click",()=>
 if($("newChallengePage"))$("newChallengePage").addEventListener("click",e=>{
  e.preventDefault();
  startNewChallengeFlow();
-});
-
 });

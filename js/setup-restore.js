@@ -6,6 +6,9 @@
 // [data-restore-archive] handler in challenge-options.js, and the file input reuses
 // wireRestoreInput/restoreBackupFromFile in app-controls.js, so both paths stay
 // single-sourced with their in-app equivalents.
+/**
+ * Render the setup restore panel with archived values escaped and action metadata intact.
+ */
 function renderSetupRestore(){
  const panel=$("setupArchiveAccess");if(!panel)return;
  // Only when the app shell is hidden and there is nothing to open.

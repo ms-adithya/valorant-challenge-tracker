@@ -1,5 +1,13 @@
 // Challenge history list on the Challenges page.
+/**
+ * Return whether the challenge has been completed.
+ * @param {object} c - The challenge record to evaluate.
+ * @returns {boolean} True when the challenge is complete.
+ */
 function challengeComplete(c){return challengeProgress(c).isComplete;}
+/**
+ * Bind a delegated click listener for archive-related actions.
+ */
 function bindArchiveActionHandlers(){
   if(typeof document==="undefined")return;
   document.addEventListener("click",(event)=>{
@@ -20,6 +28,9 @@ function bindArchiveActionHandlers(){
   });
 }
 if(typeof document!=="undefined")bindArchiveActionHandlers();
+/**
+ * Render the active and archived challenge list with safe delegated actions.
+ */
 function renderArchive(){
  const all=[...activeChallenges.map(c=>({...c,_active:true})),...archives.map(c=>({...c,_active:false}))];
  const el=$("challengeArchive");
@@ -40,6 +51,11 @@ function renderArchive(){
      : `<button class="ghost" type="button" data-archive-action="unarchive" data-archive-id="${safeId}">Unarchive</button><button class="ghost delete-archive-btn" type="button" data-archive-action="delete-archived" data-archive-id="${safeId}">Delete</button>`}</div></div>`;
  }).join(""):'<div class="card empty">No challenges yet.</div>';
 }
+/**
+ * Find a challenge by identifier across the active and archived collections.
+ * @param {string} id - The challenge identifier to locate.
+ * @returns {object|null} Matching challenge or null.
+ */
 function findChallengeById(id){return activeChallenges.find(c=>c.id===id)||archives.find(c=>c.id===id)||null;}
 
 if(typeof module!=="undefined"&&module.exports){
