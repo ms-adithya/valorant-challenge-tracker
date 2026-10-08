@@ -1,7 +1,41 @@
 // Match import: delimited parsing, header mapping, row validation and the modal shell.
+const IMPORT_LIMITS = Object.freeze({
+  maxFileBytes: 2 * 1024 * 1024,
+  maxRows: 5000,
+  maxColumns: 100,
+  maxFieldLength: 4000,
+  maxScoreStringLength: 24,
+});
+
 let pendingMatchImport=[];
 
+function checkImportBounds(rows, textLength){
+  if (typeof textLength === "number" && textLength > IMPORT_LIMITS.maxFileBytes) {
+    throw new Error(`Import file is too large: ${textLength} bytes exceeds the ${IMPORT_LIMITS.maxFileBytes} byte limit.`);
+  }
+  if (rows.length > IMPORT_LIMITS.maxRows) {
+    throw new Error(`Import row count exceeds the ${IMPORT_LIMITS.maxRows} row limit.`);
+  }
+  const overWide = rows.find((row) => row.length > IMPORT_LIMITS.maxColumns);
+  if (overWide) {
+    throw new Error(`Import column count exceeds the ${IMPORT_LIMITS.maxColumns} column limit.`);
+  }
+  for (const row of rows) {
+    for (const cell of row) {
+      const value = String(cell ?? "");
+      if (value.length > IMPORT_LIMITS.maxFieldLength) {
+        throw new Error(`Import field exceeds the ${IMPORT_LIMITS.maxFieldLength} character field limit.`);
+      }
+    }
+  }
+}
+
 function parseDelimited(text,delimiter=","){
+ if (typeof text !== "string") throw new Error("Import content must be a string.");
+ const size = text.length;
+ if (size > IMPORT_LIMITS.maxFileBytes) {
+   throw new Error(`Import file is too large: ${size} bytes exceeds the ${IMPORT_LIMITS.maxFileBytes} byte limit.`);
+ }
  const rows=[];let row=[],cell="",quoted=false;
  for(let i=0;i<text.length;i++){
   const ch=text[i],next=text[i+1];
@@ -17,6 +51,7 @@ function parseDelimited(text,delimiter=","){
   cell+=ch;
  }
  row.push(cell);if(row.some(v=>String(v).trim()!==""))rows.push(row);
+ checkImportBounds(rows, size);
  return rows;
 }
 function normHeader(v){return String(v||"").toLowerCase().replace(/[%Δ]/g,m=>m==="%"?"percent":"delta").replace(/[^a-z0-9]+/g,"").trim()}
@@ -104,24 +139,28 @@ function openImportMatchesModal(){if(typeof $==="function"&&$("importMatchesModa
 function closeImportMatchesModal(){if(typeof $==="function"&&$("importMatchesModal")){$("importMatchesModal").classList.add("hidden");$("importMatchesModal").setAttribute("aria-hidden","true");}pendingMatchImport=[]}
 
 if(typeof document!=="undefined"){
- document.querySelectorAll("[data-import-close]").forEach(x=>x.addEventListener("click",closeImportMatchesModal));
+ const importCloseEls=document.querySelectorAll ? document.querySelectorAll("[data-import-close]") : [];
+ importCloseEls.forEach(x=>x.addEventListener("click",closeImportMatchesModal));
 
- document.addEventListener("click",e=>{
-  const modal=typeof $==="function"?$("importMatchesModal"):null;
-  if(!modal||modal.classList.contains("hidden"))return;
-  if(e.target.closest("[data-import-close]")){
-   e.preventDefault();
-   e.stopPropagation();
-   closeImportMatchesModal();
-  }
- });
- document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"&&typeof $==="function"&&!$("importMatchesModal")?.classList.contains("hidden"))closeImportMatchesModal();
- });
+ if (typeof document.addEventListener === "function") {
+  document.addEventListener("click",e=>{
+   const modal=typeof $==="function"?$("importMatchesModal"):null;
+   if(!modal||modal.classList.contains("hidden"))return;
+   if(e.target.closest("[data-import-close]")){
+    e.preventDefault();
+    e.stopPropagation();
+    closeImportMatchesModal();
+   }
+  });
+  document.addEventListener("keydown",e=>{
+   if(e.key==="Escape"&&typeof $==="function"&&!$("importMatchesModal")?.classList.contains("hidden"))closeImportMatchesModal();
+  });
+ }
 }
 
 if(typeof module!=="undefined"&&module.exports){
  module.exports={
+  IMPORT_LIMITS,
   parseDelimited,
   normHeader,
   normaliseImportedObject,
