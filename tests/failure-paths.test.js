@@ -24,7 +24,7 @@ const {
   latestRankState,
 } = require("../js/rank-progression.js");
 const { parseDelimited, normaliseImportedObject, validateImportedMatch } = require("../js/import-parse.js");
-const { escapeJsSingleQuoted, escapeHtml } = require("../js/dom-utils.js");
+const { escapeHtml } = require("../js/dom-utils.js");
 const { countedMatches, getTablePage, getPaginationPages } = require("../js/match-dataset.js");
 
 // ---------------------------------------------------------------------------
@@ -1126,17 +1126,10 @@ test("match table pagination: getTablePage and getPaginationPages boundary calcu
 });
 
 // ---------------------------------------------------------------------------
-// 14. Escaping & Attribute Boundary Safety
+// 14. HTML Escaping
 // ---------------------------------------------------------------------------
 
-test("dom utils: escapeJsSingleQuoted escapes single and double quotes to prevent attribute breakout", () => {
-  assert.strictEqual(escapeJsSingleQuoted("normal"), "normal");
-  assert.strictEqual(escapeJsSingleQuoted("it's"), "it\\'s");
-  assert.strictEqual(escapeJsSingleQuoted('ch"onclick="alert(1)'), 'ch&quot;onclick=&quot;alert(1)');
-  assert.strictEqual(escapeJsSingleQuoted("&apos;);alert(1);//"), "&amp;apos;);alert(1);//");
-  assert.strictEqual(escapeJsSingleQuoted("multi\nline\rtext"), "multi\\nline\\rtext");
-
-  // Verify escapeHtml behaves as expected
+test("dom utils: escapeHtml encodes HTML-sensitive characters", () => {
   assert.strictEqual(escapeHtml('<script>alert("xss")</script>'), "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;");
 });
 

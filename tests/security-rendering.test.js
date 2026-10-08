@@ -4,16 +4,17 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const { escapeHtml, escapeJsSingleQuoted } = require('../js/dom-utils.js');
+const { escapeHtml } = require('../js/dom-utils.js');
 
 const elements = new Map();
+let archiveActionClickHandler;
 global.escapeHtml = escapeHtml;
-global.escapeJsSingleQuoted = escapeJsSingleQuoted;
 global.$ = (id) => {
   if (!elements.has(id)) {
     elements.set(id, {
       innerHTML: '',
       dataset: {},
+      classList: { toggle() {} },
       addEventListener() {},
       querySelectorAll() { return []; },
     });
@@ -21,7 +22,9 @@ global.$ = (id) => {
   return elements.get(id);
 };
 global.document = {
-  addEventListener() {},
+  addEventListener(type, handler) {
+    if (type === 'click' && !archiveActionClickHandler) archiveActionClickHandler = handler;
+  },
   querySelectorAll() { return []; },
 };
 
@@ -46,8 +49,9 @@ test('challenge archive renders attacker-controlled values as inert text', () =>
   const html = global.$('challengeArchive').innerHTML;
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html, /<img[^>]*onerror/i);
-  assert.match(html, /onclick="[^"]*&amp;apos;\);alert\(1\);\/\/[^"]*"/);
-  assert.doesNotMatch(html, /onclick="[^"]*&apos;/);
+  assert.doesNotMatch(html, /<[a-z][^>]*\son(click|change|input|load)\s*=/i);
+  assert.match(html, /data-archive-action="open-active"/i);
+  assert.match(html, /data-archive-id="[^"]*alert\(1\);\/\/"/i);
 });
 
 test('analytics labels are escaped in agent, distribution, and win-bar output', () => {
@@ -129,4 +133,78 @@ test('import preview escapes untrusted fields before commit', () => {
   assert.doesNotMatch(html, /<img[^>]*onerror/i);
   assert.doesNotMatch(html, /<[^>]+\sonclick\s*=/i);
   assert.match(html, /<span class="result-pill ">No result<\/span>/);
+});
+
+test('archive actions use data attributes instead of inline JavaScript', () => {
+  global.activeChallenges = [{ id: '&apos;);alert(1);//', name: 'Test challenge', matches: [] }];
+  global.archives = [];
+  global.data = null;
+  global.challengeProgress = () => ({ isComplete: false });
+  global.challengeProgressText = () => '0/0 matches';
+
+  const { renderArchive } = require('../js/challenge-archive.js');
+  renderArchive();
+
+  const html = global.$('challengeArchive').innerHTML;
+  assert.doesNotMatch(html, /on(click|change|input|load)\s*=/i);
+  assert.match(html, /data-archive-action=/i);
+  assert.match(html, /data-archive-id=/i);
+});
+
+test('delegated delete actions pass decoded IDs from all archive views', () => {
+  const hostileId = '&apos;);alert(1);//';
+  const archivedChallenge = { id: hostileId, name: 'Archived challenge', matches: [], target: 10 };
+  const calls = [];
+  global.deleteActiveById = (id) => calls.push(['delete-active', id]);
+  global.deleteArchivedChallenge = (id) => calls.push(['delete-archived', id]);
+  global.activeChallenges = [{ ...archivedChallenge, name: 'Active challenge' }];
+  global.archives = [];
+  global.data = null;
+  global.challengeProgress = () => ({ isComplete: false });
+  global.challengeProgressText = () => '0/10 matches';
+
+  const { renderArchive } = require('../js/challenge-archive.js');
+  renderArchive();
+  const activeHtml = global.$('challengeArchive').innerHTML;
+  assert.ok(activeHtml.includes(`data-archive-action="delete-active" data-archive-id="&amp;apos;);alert(1);//"`));
+
+  const navigation = fs.readFileSync(path.join(__dirname, '..', 'js', 'navigation.js'), 'utf8');
+  const navigationContext = { $, document: global.document, escapeHtml, archives: [archivedChallenge] };
+  vm.runInNewContext(navigation, navigationContext);
+  navigationContext.renderArchiveBrowser();
+  const browserHtml = global.$('archiveBrowserList').innerHTML;
+  assert.ok(browserHtml.includes(`data-archive-action="delete-archived" data-archive-id="&amp;apos;);alert(1);//"`));
+
+  const setupRestore = fs.readFileSync(path.join(__dirname, '..', 'js', 'setup-restore.js'), 'utf8');
+  const setupContext = {
+    $,
+    escapeHtml,
+    challengeProgressText: global.challengeProgressText,
+    wireRestoreInput() {},
+    data: null,
+    activeChallenges: [],
+    archives: [archivedChallenge],
+  };
+  vm.runInNewContext(setupRestore, setupContext);
+  setupContext.renderSetupRestore();
+  const setupHtml = global.$('setupArchiveList').innerHTML;
+  assert.ok(setupHtml.includes(`data-archive-action="delete-archived" data-archive-id="&amp;apos;);alert(1);//"`));
+
+  const dispatchDelete = (action) => archiveActionClickHandler({
+    target: {
+      closest(selector) {
+        assert.equal(selector, '[data-archive-action]');
+        return { dataset: { archiveAction: action, archiveId: hostileId } };
+      },
+    },
+  });
+  dispatchDelete('delete-active');
+  dispatchDelete('delete-archived');
+  dispatchDelete('delete-archived');
+
+  assert.deepEqual(calls, [
+    ['delete-active', hostileId],
+    ['delete-archived', hostileId],
+    ['delete-archived', hostileId],
+  ]);
 });
