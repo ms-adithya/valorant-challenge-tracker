@@ -8,7 +8,11 @@ function challengeReportStats(c){
 }
 function downloadText(filename,text,type){downloadBlob(filename,new Blob([text],{type}));}
 function downloadBlob(filename,blob){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0);}
-function csvCell(v){const x=v===null||v===undefined?"":String(v);return `"${x.replace(/"/g,'""')}"`;}
+function csvCell(v){
+ const x=v===null||v===undefined?"":String(v);
+ const safe = /^\s*[=+\-@]/.test(x) ? `'${x}` : x;
+ return `"${safe.replace(/"/g,'""')}"`;
+}
 function reportFileStem(c){return (c.name||"challenge").replace(/[^a-z0-9_-]+/gi,"-").replace(/-{2,}/g,"-").replace(/^-|-$/g,"")||"challenge";}
 window.exportChallengeCSV=function(id){const c=findChallengeById(id);if(!c)return;const fields=["no","agent","map","result","myScore","enemyScore","rankStatus","rankAfter","kills","deaths","assists","acs","adr","ddDelta","hs","kast","rrAfter","rrChange","firstKills","firstDeaths","multiKills","rounds","notes"];const rows=[fields.join(","),...(c.matches||[]).slice().sort((a,b)=>a.no-b.no).map(m=>fields.map(k=>csvCell(m[k])).join(","))];downloadText(`${reportFileStem(c)}-matches.csv`,rows.join("\n"),"text/csv;charset=utf-8");};
 window.exportChallengeJSON=function(id){const c=findChallengeById(id);if(!c)return;downloadText(`${reportFileStem(c)}-report.json`,JSON.stringify({exportedAt:new Date().toISOString(),challenge:c,analytics:challengeReportStats(c)},null,2),"application/json");};
@@ -24,11 +28,14 @@ window.exportChallengeJSON=function(id){const c=findChallengeById(id);if(!c)retu
 // forms → ASCII); emoji and anything still unmappable are dropped rather than
 // turned into "?", so a challenge name like "🎯 Grind" reads as "Grind".
 const PDF_SUBS={"—":"-","–":"-","→":"->","←":"<-","’":"'","‘":"'","“":'"',"”":'"',"≥":">=","≤":"<="};
+const PDF_TEXT_LIMIT = 120;
 function pdfText(v){
- return String(v??"").normalize("NFKC")
+ const raw = String(v ?? "").normalize("NFKC")
   .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/gu,"")
   .replace(/[^\x20-\x7E\xA0-\xFF]/gu,ch=>PDF_SUBS[ch]??"")
   .replace(/ {2,}/g," ").trim();
+ if (raw.length <= PDF_TEXT_LIMIT) return raw;
+ return `${raw.slice(0, PDF_TEXT_LIMIT - 3)}...`;
 }
 const PDF_INK=[22,25,29],PDF_MUTED=[104,114,124],PDF_LINE=[216,221,226],PDF_ACCENT=[237,77,88],PDF_WIN=[47,160,108],PDF_LOSS=[214,61,73],PDF_MARGIN=42;
 
@@ -100,10 +107,11 @@ function buildChallengeReportPDF(c,s){
   // Agent and Map are left flexible so autoTable can absorb the leftover width
   // and the table spans the full content column on any page size.
   columnStyles:{0:{cellWidth:34},1:{cellWidth:36},4:{cellWidth:40,halign:"right"},5:{cellWidth:56,halign:"right"},6:{cellWidth:32,halign:"right"},7:{cellWidth:32,halign:"right"},8:{cellWidth:34,halign:"right"},9:{cellWidth:36,halign:"right"},10:{cellWidth:38,halign:"right"},11:{cellWidth:35,halign:"right"}},
-  didParseCell:d=>{if(d.section==="body"&&d.column.index===1){const r=d.cell.raw;if(r==="Win"){d.cell.styles.textColor=PDF_WIN;d.cell.styles.fontStyle="bold";}else if(r==="Loss"){d.cell.styles.textColor=PDF_LOSS;}}}});
+  didParseCell:d=>{if(d.section==="body"&&d.column.index===1){const r=d.cell.raw;if(r==="Win"){d.cell.styles.textColor=PDF_WIN;d.cell.styles.fontStyle="bold";}else if(r==="Loss"){d.cell.styles.textColor=PDF_LOSS;}}},
+  didDrawPage: () => { if (doc.internal.getNumberOfPages() > 50) throw new Error("Report exceeds 50 page limit."); }});
 
  // Footers last, so the page count is final.
- const total=doc.internal.getNumberOfPages(),stamp=pdfText(`${c.name||"Challenge"} · generated ${new Date().toLocaleString()}`)||"Challenge report";
+ const total=doc.internal.getNumberOfPages(),stamp=pdfText(`${c.name||"Challenge"} — generated ${new Date().toLocaleString()}`)||"Challenge report";
  for(let p=1;p<=total;p++){
   doc.setPage(p);
   doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(...PDF_MUTED);
@@ -117,7 +125,14 @@ window.downloadChallengeReportPDF=function(id){
  if(!c||!challengeComplete(c))return;
  if(!window.jspdf?.jsPDF){showAppNotice("The PDF library failed to load, so the report could not be generated. Reload the page and try again.","Report unavailable");return;}
  try{downloadBlob(`${reportFileStem(c)}-report.pdf`,buildChallengeReportPDF(c,challengeReportStats(c)).output("blob"));}
- catch(err){console.error("Challenge report PDF failed",err);showAppNotice("The challenge report could not be generated. Your match data is unchanged.","Report failed");}
+ catch(err){
+  console.error("Challenge report PDF failed",err);
+  if (err.message && err.message.includes("page limit")) {
+   showAppNotice("This challenge is too large to generate a PDF report. Please export to CSV or JSON instead.", "Report too large");
+  } else {
+   showAppNotice("The challenge report could not be generated. Your match data is unchanged.","Report failed");
+  }
+ }
 };
 // Older call sites (and the archive list) still reach the report through these.
 window.openChallengeReport=function(id){downloadChallengeReportPDF(id);};
