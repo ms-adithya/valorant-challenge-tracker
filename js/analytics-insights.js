@@ -1,4 +1,22 @@
 // Streaks, agent x map combo insights and the agent/map matrix.
+const safeEscapeHtml = typeof escapeHtml === "function"
+    ? escapeHtml
+    : (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+    }[char]));
+
+const safeOptionalNumber = typeof optionalNumber === "function"
+    ? optionalNumber
+    : (value) => {
+            if (value === null || value === undefined || value === "") return null;
+            const num = Number(value);
+            return Number.isFinite(num) ? num : null;
+        };
+
 function streaks(){
  let bestW=0,bestL=0,cw=0,cl=0,curS=0,curType="";
  analyticsMatches().forEach(m=>{if(m.result==="Win"){cw++;cl=0;bestW=Math.max(bestW,cw)}else if(m.result==="Loss"){cl++;cw=0;bestL=Math.max(bestL,cl)}else{cw=cl=0}});
@@ -49,14 +67,45 @@ function renderInsights(){
   };
   cards.push(comboCard("Best combo",c.best,c.bestTies),comboCard("Weakest combo",c.worst,c.worstTies));
  }
- $("insights").innerHTML=cards.map(x=>`<div class="insight"><span>${escapeHtml(x[0])}</span><b>${escapeHtml(x[1])}</b><small>${escapeHtml(x[2])}</small></div>`).join("");
+    $("insights").innerHTML=cards.map(x=>`<div class="insight"><span>${safeEscapeHtml(x[0])}</span><b>${safeEscapeHtml(x[1])}</b><small>${safeEscapeHtml(x[2])}</small></div>`).join("");
 }
 
 function renderMatrix(){
  const scope=analyticsMatches();
- const usedAgents=[...new Set(scope.map(m=>m.agent).filter(Boolean))],usedMaps=[...new Set(scope.map(m=>m.map).filter(Boolean))];
+ const matrixLimit = 12;
+ const agentSet=new Set(),mapSet=new Set();
+ let agentsTruncated=false,mapsTruncated=false;
+ for(const match of scope){
+  const agent=match.agent,map=match.map;
+  if(agent){if(agentSet.size<matrixLimit||agentSet.has(agent))agentSet.add(agent);else agentsTruncated=true}
+  if(map){if(mapSet.size<matrixLimit||mapSet.has(map))mapSet.add(map);else mapsTruncated=true}
+ }
+ const usedAgents=[...agentSet],usedMaps=[...mapSet];
+ const truncated=agentsTruncated||mapsTruncated;
  if(!usedAgents.length){$("matrix").innerHTML='<div class="empty">Agent × map combinations appear here after matches are added.</div>';return}
- let head=`<div class="matrix" style="--cols:${usedMaps.length}"><div class="matrix-row"><b>Agent</b>${usedMaps.map(x=>`<b class="cell">${escapeHtml(x)}</b>`).join("")}</div>`;
- usedAgents.forEach(a=>{head+=`<div class="matrix-row"><b>${escapeHtml(a)}</b>${usedMaps.map(mp=>{const x=scope.filter(m=>m.agent===a&&m.map===mp),w=x.filter(m=>m.result==="Win").length,kVals=x.map(m=>optionalNumber(m.kills)),dVals=x.map(m=>optionalNumber(m.deaths)),hasKD=kVals.every(v=>v!==null)&&dVals.every(v=>v!==null),k=hasKD?kVals.reduce((sum,v)=>sum+v,0):null,d=hasKD?dVals.reduce((sum,v)=>sum+v,0):null,kd=hasKD?(d?k/d:k):null;return x.length?`<div class="cell ${x.length>=3?"qualified-combo":""}"><strong>${(w/x.length*100).toFixed(0)}% WR</strong><span>${x.length}M · ${kd===null?"—":kd.toFixed(2)} KD</span>${x.length>=3?`<em class="combo-qualified" title="Qualified: 3+ matches" aria-label="Qualified combination">Q</em>`:""}</div>`:`<div class="cell"><span>—</span></div>`}).join("")}</div>`});
- $("matrix").innerHTML=head+"</div>";
+ const matrixBanner=truncated?`<div class="matrix-limit-note">Showing first ${matrixLimit} agents and maps only.</div>`:"";
+ const selectedAgents=new Set(usedAgents),selectedMaps=new Set(usedMaps),statsByAgent=new Map(usedAgents.map(agent=>[agent,new Map()]));
+ for(const match of scope){
+  const agent=match.agent,map=match.map;
+  if(!selectedAgents.has(agent)||!selectedMaps.has(map))continue;
+  let stats=statsByAgent.get(agent).get(map);
+  if(!stats){stats={matches:0,wins:0,kills:0,deaths:0,hasKD:true};statsByAgent.get(agent).set(map,stats)}
+  stats.matches++;
+  if(match.result==="Win")stats.wins++;
+  const kills=safeOptionalNumber(match.kills),deaths=safeOptionalNumber(match.deaths);
+  if(kills===null||deaths===null)stats.hasKD=false;
+  else{stats.kills+=kills;stats.deaths+=deaths}
+ }
+ let head=`<div class="matrix" style="--cols:${usedMaps.length}"><div class="matrix-row"><b>Agent</b>${usedMaps.map(x=>`<b class="cell">${safeEscapeHtml(x)}</b>`).join("")}</div>`;
+ usedAgents.forEach(agent=>{head+=`<div class="matrix-row"><b>${safeEscapeHtml(agent)}</b>${usedMaps.map(map=>{
+  const stats=statsByAgent.get(agent).get(map);
+  if(!stats)return '<div class="cell"><span>—</span></div>';
+  const kd=stats.hasKD?(stats.deaths?stats.kills/stats.deaths:stats.kills):null;
+  return `<div class="cell ${stats.matches>=3?"qualified-combo":""}"><strong>${(stats.wins/stats.matches*100).toFixed(0)}% WR</strong><span>${stats.matches}M · ${kd===null?"—":kd.toFixed(2)} KD</span>${stats.matches>=3?`<em class="combo-qualified" title="Qualified: 3+ matches" aria-label="Qualified combination">Q</em>`:""}</div>`;
+ }).join("")}</div>`});
+ $("matrix").innerHTML=matrixBanner+head+"</div>";
+}
+
+if(typeof module!=="undefined"&&module.exports){
+ module.exports={streaks,comboInsight,renderInsights,renderMatrix};
 }
