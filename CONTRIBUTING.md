@@ -39,6 +39,7 @@ To keep the application fast, lightweight, and reliable for all players, this pr
 ## Local Development & Testing
 
 ### Running the App Locally
+
 You can serve the static files with any local HTTP server:
 
 ```bash
@@ -49,10 +50,11 @@ python -m http.server 8000
 ```
 
 ### Running Tests
+
 All contributions must pass the automated test suites before being merged:
 
 ```bash
-# Run pure unit & failure path tests (124 tests)
+# Run pure unit & failure path tests (147 tests)
 npm test
 
 # Run Firestore Security Rules tests via emulator (40 tests, requires Java 21)
@@ -75,7 +77,7 @@ npm run test:rules
 3. **Checklist Before Submitting**:
    - [ ] No new npm runtime dependencies or build tools introduced.
    - [ ] Script order in `index.html` preserved.
-   - [ ] All 124 unit/failure tests pass (`npm test`).
+   - [ ] All 147 unit/failure tests pass (`npm test`).
    - [ ] All 40 security rules tests pass (`npm run test:rules`) if `firestore.rules` was modified.
    - [ ] No `.md` files in `docs/` modified.
    - [ ] Adhere to the [Code of Conduct](CODE_OF_CONDUCT.md).
@@ -95,4 +97,3 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 - **Bug Reports**: Please use our [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md) and include browser name/version, steps to reproduce, and console errors (F12).
 - **Feature Requests**: Please use our [Feature Request template](.github/ISSUE_TEMPLATE/feature_request.md) to propose enhancements aligned with the tracker's zero-build-step philosophy.
 - **Security Vulnerabilities**: Do **not** open public issues. Follow our private disclosure policy in [SECURITY.md](SECURITY.md).
-
