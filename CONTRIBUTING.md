@@ -54,7 +54,7 @@ python -m http.server 8000
 All contributions must pass the automated test suites before being merged:
 
 ```bash
-# Run pure unit & failure path tests (142 tests)
+# Run pure unit & failure path tests (145 tests)
 npm test
 
 # Run Firestore Security Rules tests via emulator (40 tests, requires Java 21)
@@ -77,7 +77,7 @@ npm run test:rules
 3. **Checklist Before Submitting**:
    - [ ] No new npm runtime dependencies or build tools introduced.
    - [ ] Script order in `index.html` preserved.
-   - [ ] All 142 unit/failure tests pass (`npm test`).
+   - [ ] All 145 unit/failure tests pass (`npm test`).
    - [ ] All 40 security rules tests pass (`npm run test:rules`) if `firestore.rules` was modified.
    - [ ] No `.md` files in `docs/` modified.
    - [ ] Adhere to the [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -29,6 +29,8 @@ window.exportChallengeJSON=function(id){const c=findChallengeById(id);if(!c)retu
 // turned into "?", so a challenge name like "🎯 Grind" reads as "Grind".
 const PDF_SUBS={"—":"-","–":"-","→":"->","←":"<-","’":"'","‘":"'","“":'"',"”":'"',"≥":">=","≤":"<="};
 const PDF_TEXT_LIMIT = 120;
+const PDF_MAX_MATCHES = 2000;
+const PDF_MAX_PAGES = 50;
 function pdfText(v){
  const raw = String(v ?? "").normalize("NFKC")
   .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/gu,"")
@@ -108,7 +110,7 @@ function buildChallengeReportPDF(c,s){
   // and the table spans the full content column on any page size.
   columnStyles:{0:{cellWidth:34},1:{cellWidth:36},4:{cellWidth:40,halign:"right"},5:{cellWidth:56,halign:"right"},6:{cellWidth:32,halign:"right"},7:{cellWidth:32,halign:"right"},8:{cellWidth:34,halign:"right"},9:{cellWidth:36,halign:"right"},10:{cellWidth:38,halign:"right"},11:{cellWidth:35,halign:"right"}},
   didParseCell:d=>{if(d.section==="body"&&d.column.index===1){const r=d.cell.raw;if(r==="Win"){d.cell.styles.textColor=PDF_WIN;d.cell.styles.fontStyle="bold";}else if(r==="Loss"){d.cell.styles.textColor=PDF_LOSS;}}},
-  didDrawPage: () => { if (doc.internal.getNumberOfPages() > 50) throw new Error("Report exceeds 50 page limit."); }});
+  didDrawPage: () => { if (doc.internal.getNumberOfPages() > PDF_MAX_PAGES) throw new Error("Report exceeds page limit."); }});
 
  // Footers last, so the page count is final.
  const total=doc.internal.getNumberOfPages(),stamp=pdfText(`${c.name||"Challenge"} — generated ${new Date().toLocaleString()}`)||"Challenge report";
@@ -123,6 +125,10 @@ function buildChallengeReportPDF(c,s){
 window.downloadChallengeReportPDF=function(id){
  const c=findChallengeById(id);
  if(!c||!challengeComplete(c))return;
+ if((c.matches?.length||0)>PDF_MAX_MATCHES){
+  showAppNotice("This challenge is too large to generate a PDF report. Please export to CSV or JSON instead.", "Report too large");
+  return;
+ }
  if(!window.jspdf?.jsPDF){showAppNotice("The PDF library failed to load, so the report could not be generated. Reload the page and try again.","Report unavailable");return;}
  try{downloadBlob(`${reportFileStem(c)}-report.pdf`,buildChallengeReportPDF(c,challengeReportStats(c)).output("blob"));}
  catch(err){
