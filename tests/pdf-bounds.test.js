@@ -168,3 +168,95 @@ test("PDF report generation: succeeds and produces downloadable file within norm
   assert.strictEqual(downloads.length, 1);
   assert.match(downloads[0].filename, /valid-completed-challenge-report\.pdf$/i);
 });
+
+test("CSV formula neutralization: preserves negative numbers while neutralizing formula injection", () => {
+  const { context } = createReportContext({ name: "Simple", matches: [] });
+
+  const source = `
+    ({
+      negInt: csvCell(-18),
+      negFloat: csvCell(-24.5),
+      negStrInt: csvCell("-18"),
+      posInt: csvCell(25),
+      nullVal: csvCell(null),
+      formulaEq: csvCell("=1+1"),
+      formulaCmd: csvCell("-cmd|' /C calc'!A0"),
+      formulaWhitespace: csvCell("   =SUM(A1:A5)"),
+      formulaAt: csvCell("@SUM(1,2)"),
+      formulaPlus: csvCell("+cmd|test")
+    })
+  `;
+
+  const res = vm.runInContext(source, context);
+
+  // Negative numbers must NOT receive leading apostrophe
+  assert.strictEqual(res.negInt, '"-18"');
+  assert.strictEqual(res.negFloat, '"-24.5"');
+  assert.strictEqual(res.negStrInt, '"-18"');
+  assert.strictEqual(res.posInt, '"25"');
+  assert.strictEqual(res.nullVal, '""');
+
+  // Formula injection MUST receive leading apostrophe
+  assert.strictEqual(res.formulaEq, '"\'=1+1"');
+  assert.strictEqual(res.formulaCmd, '"\'-cmd|\' /C calc\'!A0"');
+  assert.strictEqual(res.formulaWhitespace, '"\'   =SUM(A1:A5)"');
+  assert.strictEqual(res.formulaAt, '"\'@SUM(1,2)"');
+  assert.strictEqual(res.formulaPlus, '"\'+cmd|test"');
+});
+
+test("PDF report generation: enforces page budget globally during breakdown tables", () => {
+  const challenge = {
+    name: "Many Agents Breakdown Challenge",
+    startRank: "Gold 1",
+    matches: Array.from({ length: 300 }, (_, i) => ({
+      no: i + 1, result: "Win", agent: `CustomAgent_${i}`, map: "Ascent", myScore: 13, enemyScore: 7
+    }))
+  };
+
+  let pageCount = 1;
+  const mockDoc = {
+    internal: {
+      pageSize: { getWidth: () => 595, getHeight: () => 842 },
+      getNumberOfPages() { return pageCount; }
+    },
+    setFontSize() {}, setFont() {}, setTextColor() {}, setDrawColor() {}, setLineWidth() {},
+    roundedRect() {}, text() {}, line() {},
+    addPage() {
+      pageCount++;
+    },
+    setPage() {}, getTextWidth() { return 10; },
+    autoTable(tableOptions) {
+      // Simulate drawing breakdown table with many pages
+      while (pageCount <= 55) {
+        if (tableOptions.didDrawPage) tableOptions.didDrawPage();
+        mockDoc.addPage();
+      }
+    },
+    output() { return "blob"; },
+    lastAutoTable: { finalY: 100 }
+  };
+
+  const notices = [];
+  const source = fs.readFileSync(path.join(__dirname, "..", "js", "challenge-report.js"), "utf8");
+  const context = {
+    window: { jspdf: { jsPDF: function() { return mockDoc; } } },
+    document: { createElement: () => ({ remove() {}, click() {} }), body: { appendChild() {} } },
+    URL: { createObjectURL: () => "blob:url", revokeObjectURL: () => {} },
+    Blob: class {},
+    showAppNotice: (message, title) => notices.push({ message, title }),
+    console: { error() {} },
+    findChallengeById: () => challenge,
+    challengeComplete: () => true,
+    challengeProgressText: () => "Completed",
+    setTimeout: (fn) => fn(),
+    optionalNumber: (v) => Number(v),
+    reportValue: (v) => String(v)
+  };
+
+  vm.runInNewContext(source, context);
+  context.window.downloadChallengeReportPDF("breakdown-overflow");
+
+  assert.strictEqual(notices.length, 1);
+  assert.match(notices[0].message, /too large to generate a PDF report/i);
+  assert.strictEqual(notices[0].title, "Report too large");
+});

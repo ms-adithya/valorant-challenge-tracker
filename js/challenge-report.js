@@ -9,7 +9,10 @@ function challengeReportStats(c){
 function downloadText(filename,text,type){downloadBlob(filename,new Blob([text],{type}));}
 function downloadBlob(filename,blob){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0);}
 function csvCell(v){
- const x=v===null||v===undefined?"":String(v);
+ if(v===null||v===undefined)return '""';
+ if(typeof v==="number"&&Number.isFinite(v))return `"${v}"`;
+ const x=String(v);
+ if(/^-?\d+(?:\.\d+)?$/.test(x.trim()))return `"${x}"`;
  const safe = /^\s*[=+\-@]/.test(x) ? `'${x}` : x;
  return `"${safe.replace(/"/g,'""')}"`;
 }
@@ -79,6 +82,20 @@ function buildChallengeReportPDF(c,s){
  const pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),width=pw-PDF_MARGIN*2;
  const styles={font:"helvetica",fontSize:8,cellPadding:4,textColor:PDF_INK,lineColor:PDF_LINE,lineWidth:.5,overflow:"linebreak"};
  const headStyles={fillColor:[243,245,247],textColor:PDF_INK,fontStyle:"bold",fontSize:8};
+ const checkPageBudget=()=>{
+  if(doc.internal.getNumberOfPages()>PDF_MAX_PAGES){
+   throw new Error("Report exceeds page limit.");
+  }
+ };
+ if(typeof doc.addPage==="function"){
+  const origAddPage=doc.addPage.bind(doc);
+  doc.addPage=function(...args){
+   if(doc.internal.getNumberOfPages()>=PDF_MAX_PAGES){
+    throw new Error("Report exceeds page limit.");
+   }
+   return origAddPage(...args);
+  };
+ }
  const breakdown=(title,key,y)=>{
   // Keep the heading with at least the first rows of its table rather than
   // stranding it at the foot of the previous page.
@@ -86,7 +103,8 @@ function buildChallengeReportPDF(c,s){
   y=drawReportHeading(doc,title,y)+4;
   doc.autoTable({startY:y,margin:{left:PDF_MARGIN,right:PDF_MARGIN,bottom:PDF_MARGIN+16},tableWidth:330,theme:"grid",styles,headStyles,
    head:[[key==="agent"?"Agent":"Map","Matches","Win rate","K/D"]],body:challengeReportGroupRows(s.ms,key),
-   columnStyles:{0:{cellWidth:132},1:{cellWidth:60,halign:"right"},2:{cellWidth:66,halign:"right"},3:{cellWidth:72,halign:"right"}}});
+   columnStyles:{0:{cellWidth:132},1:{cellWidth:60,halign:"right"},2:{cellWidth:66,halign:"right"},3:{cellWidth:72,halign:"right"}},
+   didDrawPage:checkPageBudget});
   return doc.lastAutoTable.finalY;
  };
  // Header block.
